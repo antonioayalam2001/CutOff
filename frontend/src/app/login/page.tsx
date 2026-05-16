@@ -31,22 +31,20 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-base-950 px-4 relative overflow-hidden">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl animate-pulse-soft" />
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl animate-pulse-soft" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-500/3 rounded-full blur-3xl" />
+        <div className="blob absolute -top-40 -left-40 w-[600px] h-[600px] bg-primary-500/10 blur-[100px]" />
+        <div className="blob-delayed absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-accent-500/5 blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary-500/3 blur-[120px]" />
       </div>
       <div className="relative w-full max-w-md animate-slide-up">
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 mx-auto mb-4 bg-primary-500/10 rounded-2xl flex items-center justify-center border border-primary-500/20">
-            <svg className="w-7 h-7 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+        <div className="text-center mb-10">
+          <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-primary-500/20 to-primary-500/5 border border-primary-500/20 flex items-center justify-center glow">
+            <span className="text-xl font-bold text-gradient">CO</span>
           </div>
-          <h1 className="text-3xl font-display text-base-100 mb-2">Gastos Compartidos</h1>
-          <p className="text-sm text-base-400">Inicia sesión para continuar</p>
+          <h1 className="text-4xl font-display font-bold tracking-wider text-gradient mb-2">CutOff</h1>
+          <p className="text-sm text-base-400 tracking-wide">Inicia sesión para continuar</p>
         </div>
-        <div className="bg-base-900/80 backdrop-blur-xl rounded-2xl border border-base-700 shadow-card p-8">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="glass-strong rounded-2xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             <Input label="Contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             <div className="text-right -mt-2">
