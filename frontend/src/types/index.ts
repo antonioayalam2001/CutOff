@@ -40,6 +40,7 @@ export interface Card {
   lastFourDigits: string;
   cutOffDay: number;
   paymentDeadlineDay: number;
+  bankProfileId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -76,6 +77,7 @@ export interface CreateCardPayload {
   lastFourDigits: string;
   cutOffDay: number;
   paymentDeadlineDay: number;
+  bankProfileId?: string;
 }
 
 export interface BillingExpense {

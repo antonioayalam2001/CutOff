@@ -2,8 +2,12 @@
 import { useState, useRef, useMemo, memo, useCallback, startTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { parseXml, ParsedTransaction } from '@/lib/xml-parser';
+import { parseFile } from '@/lib/api';
 import { Card } from '@/types';
 import { Select } from '@/components/ui/Select';
+
+const IMAGE_SUPPORTED_IDS = ['santander', 'generico'];
+const XML_ONLY_ID = 'hsbc';
 
 interface MemberOption {
   userId: string;
@@ -131,6 +135,7 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<Map<string, { date: string; amount: string; concept: string; userId: string }>>(new Map());
 
@@ -138,6 +143,20 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
   const cardOptions = useMemo(() => cards.map((c) => ({ value: c.id, label: c.name })), [cards]);
   const cardMap = useMemo(() => new Map(cards.map((c) => [c.id, c.name])), [cards]);
   const cardName = useMemo(() => cardMap.get(cardId) || '', [cardMap, cardId]);
+
+  const selectedCard = useMemo(() => cards.find((c) => c.id === cardId), [cards, cardId]);
+  const isHsbc = useMemo(
+    () => selectedCard?.bankProfileId === XML_ONLY_ID,
+    [selectedCard],
+  );
+  const canImportImage = useMemo(
+    () => selectedCard?.bankProfileId == null || IMAGE_SUPPORTED_IDS.includes(selectedCard.bankProfileId) || isHsbc,
+    [selectedCard, isHsbc],
+  );
+  const imageOnly = useMemo(
+    () => selectedCard?.bankProfileId != null && !isHsbc,
+    [selectedCard, isHsbc],
+  );
 
   const initEditRef = (parsed: ParsedTransaction[]) => {
     const map = new Map<string, { date: string; amount: string; concept: string; userId: string }>();
@@ -154,20 +173,49 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
 
   const handleFile = async (file: File) => {
     setError('');
-    if (!file.name.endsWith('.xml')) {
-      setError('Solo se permiten archivos XML');
+    const isXml = file.name.endsWith('.xml');
+    const isImage = /\.(png|jpg|jpeg)$/i.test(file.name);
+
+    if (!isXml && !isImage) {
+      setError('Solo se permiten archivos XML o imágenes (PNG/JPG)');
       return;
     }
-    const text = await file.text();
+
+    if (isXml && !isHsbc) {
+      setError('La importación XML solo está disponible para tarjetas HSBC.');
+      return;
+    }
+
     let parsed: ParsedTransaction[];
-    try {
-      parsed = parseXml(text);
-    } catch (e) {
-      setError((e as Error).message);
-      return;
+
+    if (isXml) {
+      const text = await file.text();
+      try {
+        parsed = parseXml(text);
+      } catch (e) {
+        setError((e as Error).message);
+        return;
+      }
+    } else {
+      setProcessing(true);
+      try {
+        parsed = await parseFile(file, selectedCard?.bankProfileId || 'generico');
+      } catch (e: any) {
+        const errData = e?.response?.data;
+        if (errData?.ocrRaw) {
+          console.log('=== OCR RAW TEXT ===');
+          console.log(errData.ocrRaw);
+          console.log('=== END OCR RAW ===');
+        }
+        setError(errData?.message || 'Error al procesar el archivo');
+        setProcessing(false);
+        return;
+      }
+      setProcessing(false);
     }
+
     if (parsed.length === 0) {
-      setError('No se encontraron transacciones en el XML');
+      setError('No se encontraron transacciones en el archivo');
       return;
     }
     initEditRef(parsed);
@@ -241,7 +289,7 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
       <div className="fixed inset-0 bg-black/60" onClick={onClose} />
       <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-base-900 border border-base-700 rounded-2xl shadow-2xl animate-scale-in p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-base-100 font-display">Importar gastos desde XML</h2>
+          <h2 className="text-lg font-semibold text-base-100 font-display">Importar gastos</h2>
           <button onClick={onClose} className="text-base-500 hover:text-base-300 transition-colors p-1">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -267,28 +315,66 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
         </div>
 
         {step === 'upload' && (
-          <div
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-base-700 hover:border-primary-500/50 rounded-xl p-12 text-center cursor-pointer transition-colors"
-          >
-            <svg className="w-10 h-10 mx-auto text-base-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <p className="text-base-300 font-medium">Arrastra un archivo XML aquí o haz clic para seleccionar</p>
-            <p className="text-base-600 text-sm mt-1">XML de estado de cuenta bancario</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xml"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFile(file);
-              }}
-            />
-          </div>
+          <>
+            {processing ? (
+              <div className="border-2 border-dashed border-base-700 rounded-xl p-12 text-center">
+                <div className="inline-flex items-center gap-3 mb-3">
+                  <svg className="animate-spin h-8 w-8 text-primary-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span className="text-base-300 font-medium">Procesando imagen...</span>
+                </div>
+                <p className="text-base-600 text-sm">Extrayendo transacciones con OCR</p>
+              </div>
+            ) : isHsbc ? (
+              <div
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-base-700 hover:border-primary-500/50 rounded-xl p-12 text-center cursor-pointer transition-colors"
+              >
+                <svg className="w-10 h-10 mx-auto text-base-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <p className="text-base-300 font-medium">Arrastra un archivo XML o imagen aquí o haz clic para seleccionar</p>
+                <p className="text-base-600 text-sm mt-1">XML de estado de cuenta o imagen (PNG/JPG)</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xml,.png,.jpg,.jpeg"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFile(file);
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-base-700 hover:border-primary-500/50 rounded-xl p-12 text-center cursor-pointer transition-colors"
+              >
+                <svg className="w-10 h-10 mx-auto text-base-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <p className="text-base-300 font-medium">Arrastra una imagen aquí o haz clic para seleccionar</p>
+                <p className="text-base-600 text-sm mt-1">Captura de pantalla del estado de cuenta bancario (PNG/JPG)</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".png,.jpg,.jpeg"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFile(file);
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
 
         {step === 'preview' && (
