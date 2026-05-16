@@ -1,10 +1,11 @@
 'use client';
-import { useMemo, useState, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
+import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { GroupTabs } from '@/components/GroupTabs';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
+import { Input } from '@/components/ui/Input';
 import { DataTable } from '@/components/DataTable';
 import { XmlImportModal } from '@/components/XmlImportModal';
 import { useExpenses, useDeleteExpense, useUpdateExpense, useCreateExpenseBulk, useDeleteExpensesBulk } from '@/hooks/useExpenses';
@@ -20,25 +21,64 @@ import { DateRange, DayPicker } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 
-export default function ExpensesPage() {
+function ExpensesContent() {
   const { groupId } = useParams<{ groupId: string }>();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const { data: group } = useGroup(groupId);
   const { data: cards } = useCards(groupId);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  const page = parseInt(searchParams.get('page') || '1', 10);
+  const limit = parseInt(searchParams.get('limit') || '10', 10);
+  const selectedCardId = searchParams.get('card') || null;
+  const dateFrom = searchParams.get('from') || undefined;
+  const dateTo = searchParams.get('to') || undefined;
+  const searchQuery = searchParams.get('q') || '';
+  const [searchInput, setSearchInput] = useState(searchQuery);
+  useEffect(() => { setSearchInput(searchQuery); }, [searchQuery]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== searchQuery) updateURL({ q: searchInput || null, page: '1' });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+  const userFilterParam = searchParams.get('user') || '';
+  const selectedUserIds = new Set(userFilterParam ? userFilterParam.split(',') : []);
+
+  const updateURL = useCallback((updates: Record<string, string | null | undefined>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === '') {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [searchParams, router, pathname]);
+
+  const setPage = useCallback((p: number | ((prev: number) => number)) => {
+    const next = typeof p === 'function' ? p(page) : p;
+    updateURL({ page: next > 1 ? String(next) : null });
+  }, [page, updateURL]);
+
+  const setLimit = useCallback((l: number) => {
+    updateURL({ limit: l !== 10 ? String(l) : null, page: '1' });
+  }, [updateURL]);
+
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(
+    dateFrom || dateTo ? { from: dateFrom ? new Date(dateFrom) : undefined, to: dateTo ? new Date(dateTo) : undefined } : undefined,
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const dateFrom = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined;
-  const dateTo = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined;
-  const { data: paginated, isLoading, isError, error } = useExpenses(groupId, { page, limit, dateFrom, dateTo });
+  const { data: paginated, isLoading, isError, error } = useExpenses(groupId, {
+    page, limit, dateFrom, dateTo, cardId: selectedCardId || undefined, search: searchQuery || undefined,
+  });
   const { data: members } = useGroupMembers(groupId);
   const deleteExpense = useDeleteExpense(groupId);
   const deleteExpensesBulk = useDeleteExpensesBulk(groupId);
   const updateExpense = useUpdateExpense(groupId);
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [showUserFilter, setShowUserFilter] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const editRef = useRef({ concept: '', amount: '', transactionDate: '' });
@@ -54,20 +94,13 @@ export default function ExpensesPage() {
   const formatCurrency = (v: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(v);
 
   const approvedMembers = (members || []).filter((m) => m.status === 'Aprobado');
-  const expenses = paginated?.data || [];
+  const expenses = (paginated?.data || []).filter(
+    (e) => selectedUserIds.size === 0 || selectedUserIds.has(e.userId),
+  );
   const total = paginated?.total || 0;
   const totalPages = paginated?.totalPages || 0;
 
-  const filteredExpenses = useMemo(() => {
-    let result = expenses;
-    if (selectedCardId) {
-      result = result.filter((e) => e.cardId === selectedCardId);
-    }
-    if (selectedUserIds.size > 0) {
-      result = result.filter((e) => selectedUserIds.has(e.userId));
-    }
-    return result;
-  }, [expenses, selectedCardId, selectedUserIds]);
+
 
   const handleDelete = (expenseId: string) => {
     setConfirmDeleteId(expenseId);
@@ -88,13 +121,7 @@ export default function ExpensesPage() {
     );
   };
 
-  const toLocalDate = (iso: string) => {
-    const d = new Date(iso);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  };
+  const toLocalDate = (iso: string) => iso.split('T')[0];
 
   const startEditing = (expense: Expense) => {
     setEditingId(expense.id);
@@ -133,15 +160,14 @@ export default function ExpensesPage() {
   };
 
   const toggleUserFilter = (userId: string) => {
-    setSelectedUserIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(userId)) next.delete(userId);
-      else next.add(userId);
-      return next;
-    });
+    const next = new Set(selectedUserIds);
+    if (next.has(userId)) next.delete(userId);
+    else next.add(userId);
+    const val = next.size > 0 ? Array.from(next).join(',') : null;
+    updateURL({ user: val, page: '1' });
   };
 
-  const clearUserFilter = () => setSelectedUserIds(new Set());
+  const clearUserFilter = () => updateURL({ user: null, page: '1' });
 
   const inputClass = 'w-full px-2 py-1 text-sm bg-base-800 border border-base-700 rounded-lg text-base-100 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20';
 
@@ -200,52 +226,74 @@ export default function ExpensesPage() {
           />
         ) : (
           <span className="text-base-500">
-            {new Date(row.original.transactionDate).toLocaleDateString('es-MX')}
+            {(() => { const [y,m,d] = row.original.transactionDate.split('T')[0].split('-'); return `${d}/${m}/${y}`; })()}
           </span>
         );
       },
     },
-    ...(isOwner
-      ? [
-          {
-            header: 'Usuario',
-            id: 'user',
-            cell: ({ row }: { row: any }) => {
-              const expense = row.original;
-              if (editingId === expense.id) {
-                return (
-                  <Select
-                    key={`user-${editingId}`}
-                    value={editUserId}
-                    onChange={(v) => setEditUserId(v)}
-                    options={approvedMembers.map((m) => ({ value: m.userId, label: m.user.name }))}
-                    compact
-                  />
-                );
-              }
-              return (
-                <Select
-                  value={expense.userId}
-                  onChange={(v) => handleUserChange(expense.id, v)}
-                  options={approvedMembers.map((m) => ({ value: m.userId, label: m.user.name }))}
-                  compact
-                />
-              );
-            },
-          } as ColumnDef<Expense>,
-        ]
-      : []),
+
     {
-      header: 'MSI',
-      accessorKey: 'isMSI',
-      cell: (info) =>
-        info.getValue() ? (
-          <span className="text-xs bg-accent-500/10 text-accent-400 px-2.5 py-0.5 rounded-full border border-accent-500/20 font-medium">
-            {info.row.original.currentInstallment}/{info.row.original.totalInstallments}
-          </span>
+      header: 'Tipo',
+      id: 'type',
+      cell: ({ row }) => {
+        const e = row.original;
+        const badges: React.ReactNode[] = [];
+        if (e.isMSI) {
+          badges.push(
+            <span key="msi" className="text-xs bg-accent-500/10 text-accent-400 px-2.5 py-0.5 rounded-full border border-accent-500/20 font-medium">
+              MSI {e.currentInstallment}/{e.totalInstallments}
+            </span>,
+          );
+        }
+        if (e.isRecurring) {
+          badges.push(
+            <span key="rec" className="text-xs bg-cyan-500/10 text-cyan-400 px-2.5 py-0.5 rounded-full border border-cyan-500/20 font-medium">
+              Recurrente {e.recurringCurrentMonth}/{e.recurringTotalMonths}
+            </span>,
+          );
+        }
+        if (e.isSplit) {
+          badges.push(
+            <span key="split" className="text-xs bg-violet-500/10 text-violet-400 px-2.5 py-0.5 rounded-full border border-violet-500/20 font-medium">
+              Compartido
+            </span>,
+          );
+        }
+        return badges.length > 0 ? (
+          <div className="flex flex-wrap gap-1">{badges}</div>
         ) : (
           <span className="text-xs text-base-600">-</span>
-        ),
+        );
+      },
+    },
+    {
+      header: 'Usuario',
+      id: 'users',
+      cell: ({ row }) => {
+        const e = row.original;
+        if (e.isSplit && e.splitUsers && e.splitUsers.length > 0) {
+          return (
+            <div className="flex flex-wrap gap-1">
+              {e.splitUsers.map((u) => (
+                <span key={u.id} className="text-xs bg-primary-500/10 text-primary-400 px-2 py-0.5 rounded-full border border-primary-500/20">
+                  {u.name}
+                </span>
+              ))}
+            </div>
+          );
+        }
+        if (isOwner && !e.isSplit) {
+          return (
+            <Select
+              value={e.userId}
+              onChange={(v) => handleUserChange(e.id, v)}
+              options={approvedMembers.map((m) => ({ value: m.userId, label: m.user.name }))}
+              compact
+            />
+          );
+        }
+        return <span className="text-sm text-base-400">{e.user?.name || '-'}</span>;
+      },
     },
     {
       header: 'Tarjeta',
@@ -297,10 +345,20 @@ export default function ExpensesPage() {
               }
               return (
                 <div className="flex items-center gap-1">
+                  <Link
+                    href={`/groups/${groupId}/expenses/${expense.id}/edit`}
+                    className="text-base-400 hover:text-primary-300 transition-colors p-1.5 rounded-lg hover:bg-primary-500/10"
+                    title="Vista detallada"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </Link>
                   <button
                     onClick={() => startEditing(expense)}
                     className="text-primary-400 hover:text-primary-300 transition-colors p-1.5 rounded-lg hover:bg-primary-500/10"
-                    title="Editar gasto"
+                    title="Editar rápido"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -339,7 +397,7 @@ export default function ExpensesPage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              Importar XML
+              Importar
             </button>
             <Link href={`/groups/${groupId}/expenses/new`}>
               <Button size="sm">Registrar gasto</Button>
@@ -348,9 +406,22 @@ export default function ExpensesPage() {
         </div>
 
         <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative w-full sm:w-auto">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Buscar por concepto..."
+              className="w-full sm:w-56 pl-9 pr-3 py-1.5 text-sm bg-base-800 border border-base-700 rounded-lg text-base-100 placeholder-base-500 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all"
+            />
+          </div>
+
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => setSelectedCardId(null)}
+              onClick={() => updateURL({ card: null, page: '1' })}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 selectedCardId === null
                   ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
@@ -362,7 +433,7 @@ export default function ExpensesPage() {
             {cards?.map((card) => (
               <button
                 key={card.id}
-                onClick={() => setSelectedCardId(card.id)}
+                onClick={() => updateURL({ card: card.id !== selectedCardId ? card.id : null, page: '1' })}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   selectedCardId === card.id
                     ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
@@ -397,8 +468,8 @@ export default function ExpensesPage() {
                 <span
                   role="button"
                   tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); setDateRange(undefined); setShowDatePicker(false); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setDateRange(undefined); setShowDatePicker(false); } }}
+                  onClick={(e) => { e.stopPropagation(); setDateRange(undefined); updateURL({ from: null, to: null, page: '1' }); setShowDatePicker(false); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setDateRange(undefined); updateURL({ from: null, to: null, page: '1' }); setShowDatePicker(false); } }}
                   className="text-base-500 hover:text-base-200 transition-colors cursor-pointer"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -416,7 +487,9 @@ export default function ExpensesPage() {
                     selected={dateRange}
                     onSelect={(range) => {
                       setDateRange(range);
-                      setPage(1);
+                      const from = range?.from ? format(range.from, 'yyyy-MM-dd') : null;
+                      const to = range?.to ? format(range.to, 'yyyy-MM-dd') : null;
+                      updateURL({ from, to, page: '1' });
                       if (range?.to) setShowDatePicker(false);
                     }}
                     locale={undefined}
@@ -516,7 +589,7 @@ export default function ExpensesPage() {
         <div className="bg-base-900 rounded-2xl border border-base-800 overflow-hidden">
           <DataTable
             columns={columns}
-            data={filteredExpenses}
+            data={expenses}
             isLoading={isLoading}
             error={isError ? (error instanceof Error ? error.message : 'Error al cargar gastos') : null}
             selectedIds={isOwner ? selectedIds : undefined}
@@ -625,5 +698,13 @@ export default function ExpensesPage() {
         }}
       />
     </ProtectedRoute>
+  );
+}
+
+export default function ExpensesPage() {
+  return (
+    <Suspense fallback={null}>
+      <ExpensesContent />
+    </Suspense>
   );
 }
