@@ -1,6 +1,7 @@
 # AGENTS.md
 
 ## Project structure
+- **Brand**: CutOff — previously Gastos Compartidos
 - Monorepo: `backend/` (NestJS 11 + TypeORM + PostgreSQL), `frontend/` (Next.js 16 App Router + TailwindCSS)
 - Docker: `docker-compose up -d` starts postgres (5432) + pgadmin (5050, admin@admin.com/admin)
 - Root `.env` holds DB and JWT config. Backend loads it via `@nestjs/config`.
@@ -28,6 +29,7 @@
 ## Frontend (Next.js)
 - **API client**: `src/lib/api.ts` — Axios instance, baseURL `http://localhost:3001/api`, auto-attaches JWT from localStorage, redirects to `/login` on 401.
 - **State**: Zustand (`authStore.ts`, `themeStore.ts`) for auth/theme. TanStack Query for server state.
+- **Design**: Liquid glassmorphism — dark theme with `glass`, `glass-strong`, `glass-nav` utility classes. Animated blob backgrounds on auth pages. Gradient text (`text-gradient`). Font: Sora (Google Fonts).
 - **UI components**: `src/components/ui/` (Button, Input, Badge, Modal, Select, Skeleton, dialog).
 - **Auth flow**: Register/Login pages call authStore → POST `/auth/register` or `/auth/login` → JWT + user saved to localStorage.
 - **Routes**: `/` → landing, `/login`, `/register`, `/forgot-password`, `/reset-password`, `/dashboard`, `/dashboard/join`, `/groups/[groupId]`, `/groups/[groupId]/{expenses,members,cards,billing}`
