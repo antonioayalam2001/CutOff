@@ -2,23 +2,17 @@
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
-import { DM_Serif_Display, DM_Sans, JetBrains_Mono } from 'next/font/google';
+import { Sora, JetBrains_Mono } from 'next/font/google';
 import { Layout } from '@/components/Layout';
 import { NavigationLoader } from '@/components/NavigationLoader';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 import './globals.css';
 
-const fontDisplay = DM_Serif_Display({
+const fontSora = Sora({
   subsets: ['latin'],
-  weight: ['400'],
-  variable: '--font-display',
-});
-
-const fontSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-sans',
+  weight: ['300', '400', '500', '600', '700', '800'],
+  variable: '--font-sora',
 });
 
 const fontMono = JetBrains_Mono({
@@ -44,12 +38,19 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
   if (!initialized) {
     return (
-      <div className="min-h-screen bg-base-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <p className="text-lg font-display text-base-400">Gastos Compartidos</p>
+      <div className="min-h-screen bg-base-950 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="blob absolute -top-40 -left-40 w-[500px] h-[500px] bg-primary-500/10 blur-[100px]" />
+          <div className="blob-delayed absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-accent-500/5 blur-[100px]" />
+        </div>
+        <div className="flex flex-col items-center gap-6 relative">
           <div className="relative">
-            <div className="h-8 w-8 rounded-full border-2 border-base-700" />
-            <div className="absolute inset-0 h-8 w-8 rounded-full border-2 border-t-primary-500 animate-spin" />
+            <div className="h-12 w-12 rounded-full border-2 border-white/10" />
+            <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-t-primary-400 animate-spin" style={{ filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.3))' }} />
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-display font-semibold tracking-wider text-gradient">CutOff</p>
+            <p className="text-xs text-base-500 mt-1 tracking-wide">Cargando...</p>
           </div>
         </div>
       </div>
@@ -61,7 +62,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}>
+    <html lang="es" className={`${fontSora.variable} ${fontMono.variable}`}>
       <body>
         <QueryClientProvider client={queryClient}>
           <NavigationLoader />
