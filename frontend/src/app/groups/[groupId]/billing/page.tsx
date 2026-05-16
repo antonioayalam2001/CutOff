@@ -18,6 +18,7 @@ export default function BillingPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [view, setView] = useState<'users' | 'cards'>('users');
   const { data: billing, isLoading, isError, error } = useBilling(groupId, year, month);
 
   return (
@@ -28,6 +29,28 @@ export default function BillingPage() {
 
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-base-100">Resumen de facturación</h2>
+          <div className="flex gap-1 p-0.5 bg-base-800 rounded-xl border border-base-700">
+            <button
+              onClick={() => setView('users')}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 ${
+                view === 'users'
+                  ? 'bg-primary-500/20 text-primary-400 shadow-sm'
+                  : 'text-base-400 hover:text-base-200'
+              }`}
+            >
+              Usuarios
+            </button>
+            <button
+              onClick={() => setView('cards')}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 ${
+                view === 'cards'
+                  ? 'bg-primary-500/20 text-primary-400 shadow-sm'
+                  : 'text-base-400 hover:text-base-200'
+              }`}
+            >
+              Tarjetas
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -109,7 +132,7 @@ export default function BillingPage() {
             <p className="text-sm text-base-500">{error instanceof Error ? error.message : 'Intenta de nuevo más tarde'}</p>
           </div>
         ) : billing ? (
-          <BillingSummary data={billing} />
+          <BillingSummary data={billing} view={view} />
         ) : (
           <div className="text-center py-16 bg-base-900 rounded-2xl border border-base-800">
             <p className="text-base-500">No hay datos de facturación disponibles</p>
