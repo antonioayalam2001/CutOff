@@ -196,4 +196,12 @@
   .animate-skeleton {
     animation: skeleton-pulse 1.5s ease-in-out infinite;
   }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 30px #111827 inset !important;
+    -webkit-text-fill-color: #e2e2ea !important;
+    caret-color: #e2e2ea !important;
+  }
 }
