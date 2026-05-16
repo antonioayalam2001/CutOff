@@ -8,16 +8,18 @@ interface ExpenseFilters {
   limit?: number;
   dateFrom?: string;
   dateTo?: string;
+  cardId?: string;
+  search?: string;
 }
 
 export function useExpenses(groupId: string, filters: ExpenseFilters = {}) {
-  const { page = 1, limit = 10, dateFrom, dateTo } = filters;
+  const { page = 1, limit = 10, dateFrom, dateTo, cardId, search } = filters;
   return useQuery<PaginatedResponse<Expense>>({
-    queryKey: ['expenses', groupId, page, limit, dateFrom, dateTo],
+    queryKey: ['expenses', groupId, page, limit, dateFrom, dateTo, cardId, search],
     queryFn: () =>
       api
         .get(`/groups/${groupId}/expenses`, {
-          params: { page, limit, dateFrom, dateTo },
+          params: { page, limit, dateFrom, dateTo, cardId, search },
         })
         .then((r) => r.data),
     enabled: !!groupId,
@@ -57,6 +59,14 @@ export function useDeleteExpense(groupId: string) {
     mutationFn: (expenseId: string) =>
       api.delete(`/groups/${groupId}/expenses/${expenseId}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses', groupId] }),
+  });
+}
+
+export function useExpense(groupId: string, expenseId: string) {
+  return useQuery<Expense>({
+    queryKey: ['expense', groupId, expenseId],
+    queryFn: () => api.get(`/groups/${groupId}/expenses/${expenseId}`).then((r) => r.data),
+    enabled: !!groupId && !!expenseId,
   });
 }
 

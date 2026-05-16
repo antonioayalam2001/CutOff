@@ -56,10 +56,36 @@ export interface Expense {
   totalInstallments: number | null;
   currentInstallment: number | null;
   installmentGroupId: string | null;
+  isRecurring: boolean;
+  recurringTotalMonths: number | null;
+  recurringCurrentMonth: number | null;
+  recurringGroupId: string | null;
+  isSplit: boolean;
+  splitGroupId: string | null;
+  splitUsers?: { id: string; name: string }[];
   createdAt: string;
   updatedAt: string;
   card?: Card;
   user?: User;
+}
+
+export interface ExpenseSplit {
+  userId: string;
+  amount: number;
+}
+
+export interface CreateExpensePayload {
+  cardId: string;
+  userId?: string;
+  concept: string;
+  amount: number;
+  transactionDate: string;
+  isMSI?: boolean;
+  totalInstallments?: number;
+  isRecurring?: boolean;
+  recurringMonths?: number;
+  isSplit?: boolean;
+  splits?: ExpenseSplit[];
 }
 
 export interface CreateExpensePayload {
