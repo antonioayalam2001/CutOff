@@ -67,7 +67,7 @@ export const Select = memo(function Select({
 
   const btnStyles = compact
     ? 'px-2 py-1 text-xs rounded-lg'
-    : 'px-3.5 py-2.5 text-sm rounded-xl';
+    : 'w-full px-3.5 py-2.5 text-sm rounded-xl';
 
   const optionStyles = compact
     ? 'px-2 py-1.5 text-xs'

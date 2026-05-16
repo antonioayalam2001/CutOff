@@ -1,5 +1,5 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { useReactTable, getCoreRowModel, flexRender, ColumnDef } from '@tanstack/react-table';
 
 interface DataTableProps<T extends { id: string }> {
@@ -47,7 +47,7 @@ function Checkbox({ checked, onChange, indeterminate }: { checked: boolean; onCh
   );
 }
 
-export function DataTable<T extends { id: string }>({
+function DataTableInner<T extends { id: string }>({
   columns,
   data,
   isLoading,
@@ -216,3 +216,5 @@ export function DataTable<T extends { id: string }>({
     </div>
   );
 }
+
+export const DataTable = memo(DataTableInner) as typeof DataTableInner;

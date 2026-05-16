@@ -1,20 +1,22 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 
+interface FormData {
+  name: string;
+  lastFourDigits: string;
+  cutOffDay: number;
+  paymentDeadlineDay: number;
+  bankProfileId?: string;
+}
+
 interface Props {
-  onSubmit: (data: {
-    name: string;
-    lastFourDigits: string;
-    cutOffDay: number;
-    paymentDeadlineDay: number;
-    bankProfileId?: string;
-  }) => Promise<void>;
+  onSubmit: (data: FormData) => Promise<void>;
   isLoading?: boolean;
 }
 
-export function CardForm({ onSubmit, isLoading }: Props) {
+export const CardForm = memo(function CardForm({ onSubmit, isLoading }: Props) {
   const [name, setName] = useState('');
   const [lastFourDigits, setLastFourDigits] = useState('');
   const [cutOffDay, setCutOffDay] = useState('');
@@ -22,7 +24,13 @@ export function CardForm({ onSubmit, isLoading }: Props) {
   const [bankProfileId, setBankProfileId] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value), []);
+  const handleLastFourChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setLastFourDigits(e.target.value.replace(/\D/g, '').slice(0, 4)), []);
+  const handleCutOffChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setCutOffDay(e.target.value), []);
+  const handlePaymentChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setPaymentDeadlineDay(e.target.value), []);
+  const handleBankChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => setBankProfileId(e.target.value), []);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -47,15 +55,15 @@ export function CardForm({ onSubmit, isLoading }: Props) {
     setCutOffDay('');
     setPaymentDeadlineDay('');
     setBankProfileId('');
-  };
+  }, [onSubmit, name, lastFourDigits, cutOffDay, paymentDeadlineDay, bankProfileId]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <Input label="Nombre de la tarjeta" value={name} onChange={(e) => setName(e.target.value)} required />
+      <Input label="Nombre de la tarjeta" value={name} onChange={handleNameChange} required />
       <Input
         label="Últimos 4 dígitos"
         value={lastFourDigits}
-        onChange={(e) => setLastFourDigits(e.target.value.replace(/\D/g, '').slice(0, 4))}
+        onChange={handleLastFourChange}
         maxLength={4}
         required
       />
@@ -66,7 +74,7 @@ export function CardForm({ onSubmit, isLoading }: Props) {
           min={1}
           max={31}
           value={cutOffDay}
-          onChange={(e) => setCutOffDay(e.target.value)}
+          onChange={handleCutOffChange}
           required
         />
         <Input
@@ -75,7 +83,7 @@ export function CardForm({ onSubmit, isLoading }: Props) {
           min={1}
           max={31}
           value={paymentDeadlineDay}
-          onChange={(e) => setPaymentDeadlineDay(e.target.value)}
+          onChange={handlePaymentChange}
           required
         />
       </div>
@@ -83,7 +91,7 @@ export function CardForm({ onSubmit, isLoading }: Props) {
         <label className="block text-sm font-medium text-base-300 mb-1.5">Perfil bancario (para importar PDF)</label>
         <select
           value={bankProfileId}
-          onChange={(e) => setBankProfileId(e.target.value)}
+          onChange={handleBankChange}
           className="w-full px-3.5 py-2.5 text-sm bg-base-900 border border-base-700 rounded-xl text-base-100 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 cursor-pointer"
         >
           <option value="">Sin banco</option>
@@ -97,4 +105,4 @@ export function CardForm({ onSubmit, isLoading }: Props) {
       </Button>
     </form>
   );
-}
+});

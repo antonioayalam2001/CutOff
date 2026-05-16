@@ -1,5 +1,5 @@
 'use client';
-import { ButtonHTMLAttributes, forwardRef } from 'react';
+import { ButtonHTMLAttributes, forwardRef, memo } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -24,7 +24,7 @@ const sizes = {
   lg: 'px-7 py-3 text-base',
 };
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+export const Button = memo(forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = 'primary', size = 'md', isLoading, className = '', children, disabled, ...props }, ref) => (
     <button
       ref={ref}
@@ -41,5 +41,5 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       {children}
     </button>
   ),
-);
+));
 Button.displayName = 'Button';

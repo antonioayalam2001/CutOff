@@ -105,8 +105,8 @@ export default function NewExpensePage() {
                 onChange={(e) => setKeepAdding(e.target.checked)}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 rounded-full transition-colors duration-200 ${keepAdding ? 'bg-primary-500' : 'bg-base-700'}`}>
-                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 mt-1 ${keepAdding ? 'translate-x-5' : 'translate-x-1'}`} />
+              <div className={`w-10 h-6 rounded-full transition-colors duration-200 flex items-center ${keepAdding ? 'bg-primary-500' : 'bg-base-700'}`}>
+                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${keepAdding ? 'translate-x-5' : 'translate-x-1'}`} />
               </div>
             </div>
             <span className="text-sm text-base-400 group-hover:text-base-300 transition-colors">

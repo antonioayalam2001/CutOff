@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useCallback, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { GroupTabs } from '@/components/GroupTabs';
 import { Modal } from '@/components/ui/Modal';
@@ -17,7 +17,6 @@ import { toast } from 'sonner';
 
 export default function CardsPage() {
   const { groupId } = useParams<{ groupId: string }>();
-  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { data: group } = useGroup(groupId);
   const { data: cards, isLoading, isError, error } = useCards(groupId);
@@ -28,7 +27,7 @@ export default function CardsPage() {
 
   const isOwner = group?.ownerId === user?.id;
 
-  const columns: ColumnDef<Card>[] = [
+  const columns = useMemo<ColumnDef<Card>[]>(() => [
     { header: 'Nombre', accessorKey: 'name' },
     {
       header: 'Últimos 4',
@@ -52,7 +51,31 @@ export default function CardsPage() {
           } as ColumnDef<Card>,
         ]
       : []),
-  ];
+  ], [isOwner]);
+
+  const handleCreateSubmit = useCallback(async (data: { name: string; lastFourDigits: string; cutOffDay: number; paymentDeadlineDay: number; bankProfileId?: string }) => {
+    try {
+      await createCard.mutateAsync(data);
+      toast.success('Tarjeta creada');
+      setShowCreate(false);
+    } catch {
+      toast.error('Error al crear tarjeta');
+    }
+  }, [createCard]);
+
+  const handleCloseModal = useCallback(() => setShowCreate(false), []);
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (confirmDeleteId) {
+      deleteCard.mutate(confirmDeleteId, {
+        onSuccess: () => toast.success('Tarjeta eliminada'),
+        onError: () => toast.error('Error al eliminar'),
+      });
+    }
+    setConfirmDeleteId(null);
+  }, [confirmDeleteId, deleteCard]);
+
+  const handleDeleteDialogChange = useCallback((open: boolean) => { if (!open) setConfirmDeleteId(null); }, []);
 
   return (
     <ProtectedRoute>
@@ -69,37 +92,18 @@ export default function CardsPage() {
           <DataTable columns={columns} data={cards || []} isLoading={isLoading} error={isError ? (error instanceof Error ? error.message : 'Error al cargar tarjetas') : null} />
         </div>
 
-        <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Nueva tarjeta">
-          <CardForm
-            onSubmit={async (data) => {
-              try {
-                await createCard.mutateAsync(data);
-                toast.success('Tarjeta creada');
-                setShowCreate(false);
-              } catch {
-                toast.error('Error al crear tarjeta');
-              }
-            }}
-            isLoading={createCard.isPending}
-          />
+        <Modal isOpen={showCreate} onClose={handleCloseModal} title="Nueva tarjeta">
+          <CardForm onSubmit={handleCreateSubmit} isLoading={createCard.isPending} />
         </Modal>
 
         <ConfirmDialog
           open={confirmDeleteId !== null}
-          onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}
+          onOpenChange={handleDeleteDialogChange}
           title="Eliminar tarjeta"
           description="¿Estás seguro de eliminar esta tarjeta? Esta acción no se puede deshacer."
           confirmLabel="Eliminar"
           isLoading={deleteCard.isPending}
-          onConfirm={() => {
-            if (confirmDeleteId) {
-              deleteCard.mutate(confirmDeleteId, {
-                onSuccess: () => toast.success('Tarjeta eliminada'),
-                onError: () => toast.error('Error al eliminar'),
-              });
-            }
-            setConfirmDeleteId(null);
-          }}
+          onConfirm={handleDeleteConfirm}
         />
       </div>
     </ProtectedRoute>
