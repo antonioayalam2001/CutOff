@@ -7,6 +7,7 @@ import { GroupsModule } from './modules/groups/groups.module';
 import { CardsModule } from './modules/cards/cards.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { PdfParserModule } from './modules/pdf-parser/pdf-parser.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { BillingModule } from './modules/billing/billing.module';
     CardsModule,
     ExpensesModule,
     BillingModule,
+    PdfParserModule,
   ],
 })
 export class AppModule {}

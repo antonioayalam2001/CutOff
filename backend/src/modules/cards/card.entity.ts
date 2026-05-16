@@ -25,6 +25,9 @@ export class Card {
   @Column({ type: 'int' })
   paymentDeadlineDay: number;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  bankProfileId: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -21,4 +21,8 @@ export class UpdateCardDto {
   @Max(31)
   @IsOptional()
   paymentDeadlineDay?: number;
+
+  @IsString()
+  @IsOptional()
+  bankProfileId?: string;
 }

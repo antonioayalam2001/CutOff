@@ -1,4 +1,4 @@
-import { IsString, Length, IsInt, Min, Max } from 'class-validator';
+import { IsString, Length, IsInt, Min, Max, IsOptional } from 'class-validator';
 
 export class CreateCardDto {
   @IsString()
@@ -17,4 +17,8 @@ export class CreateCardDto {
   @Min(1)
   @Max(31)
   paymentDeadlineDay: number;
+
+  @IsString()
+  @IsOptional()
+  bankProfileId?: string;
 }
