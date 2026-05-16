@@ -1,6 +1,6 @@
-# Gastos Compartidos
+# CutOff
 
-Aplicación web para la gestión de gastos compartidos en grupo. Permite crear grupos, agregar miembros, registrar gastos, asignar tarjetas y visualizar resúmenes de facturación.
+Aplicación web moderna para la gestión y división de gastos compartidos en grupo. Crea grupos, agrega miembros, registra gastos, asigna tarjetas y visualiza resúmenes de facturación con una interfaz de vidrio líquido.
 
 ---
 
@@ -8,8 +8,8 @@ Aplicación web para la gestión de gastos compartidos en grupo. Permite crear g
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | Next.js 14 (App Router), React 18, TypeScript, TailwindCSS |
-| Backend | NestJS 10, TypeORM, PostgreSQL |
+| Frontend | Next.js 16 (App Router), React 18, TypeScript, TailwindCSS |
+| Backend | NestJS 11, TypeORM, PostgreSQL |
 | Autenticación | JWT (Passport) |
 | Estado | Zustand, TanStack Query |
 | Contenedores | Docker Compose (PostgreSQL + pgAdmin) |
