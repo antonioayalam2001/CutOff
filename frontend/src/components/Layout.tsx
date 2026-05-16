@@ -23,23 +23,28 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-base-950 transition-colors duration-150">
-      <nav className="sticky top-0 z-40 border-b border-base-800 bg-base-950/80 backdrop-blur-xl">
+      <nav className="glass-nav sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-8">
               <Link
                 href="/dashboard"
-                className="text-lg font-display text-base-100 tracking-tight hover:text-primary-400 transition-colors"
+                className="flex items-center gap-2.5 group"
               >
-                Gastos Compartidos
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500/20 to-primary-500/5 border border-primary-500/20 flex items-center justify-center group-hover:from-primary-500/30 group-hover:to-primary-500/10 transition-all duration-300">
+                  <span className="text-sm font-bold text-gradient">CO</span>
+                </div>
+                <span className="text-lg font-display font-bold tracking-wider text-gradient">
+                  CutOff
+                </span>
               </Link>
               <div className="hidden sm:flex items-center gap-1">
                 <Link
                   href="/dashboard"
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                     pathname === '/dashboard'
                       ? 'bg-base-800 text-base-100'
-                      : 'text-base-400 hover:text-base-200 hover:bg-base-800/50'
+                      : 'text-base-400 hover:text-base-200 hover:bg-base-800'
                   }`}
                 >
                   Dashboard
@@ -49,7 +54,7 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={toggle}
-                className="p-2 rounded-lg text-base-400 hover:text-base-200 hover:bg-base-800/50 transition-all duration-200 active:scale-90"
+                className="p-2 rounded-lg text-base-400 hover:text-base-200 hover:bg-base-800 transition-all duration-200 active:scale-90"
                 aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
               >
                 {theme === 'dark' ? (
@@ -72,7 +77,7 @@ export function Layout({ children }: LayoutProps) {
                   logout();
                   router.push('/login');
                 }}
-                className="text-sm text-base-500 hover:text-base-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-base-800/50"
+                className="text-sm text-base-500 hover:text-base-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-base-800"
               >
                 Cerrar sesión
               </button>
