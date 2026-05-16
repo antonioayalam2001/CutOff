@@ -16,12 +16,12 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-base-950">
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-6">
           <div className="relative">
-            <div className="h-12 w-12 rounded-full border-2 border-base-700" />
-            <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-t-primary-500 animate-spin" />
+            <div className="h-12 w-12 rounded-full border-2 border-white/10" />
+            <div className="absolute inset-0 h-12 w-12 rounded-full border-2 border-t-primary-400 animate-spin" style={{ filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.3))' }} />
           </div>
-          <p className="text-sm text-base-500 animate-pulse-soft">Cargando...</p>
+          <p className="text-sm text-base-500 animate-pulse-soft tracking-wide">Cargando...</p>
         </div>
       </div>
     );
