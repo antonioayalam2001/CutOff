@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, Min, Max, IsDateString } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsDateString, IsUUID, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class FindAllExpensesDto {
@@ -22,4 +22,12 @@ export class FindAllExpensesDto {
   @IsOptional()
   @IsDateString()
   dateTo?: string;
+
+  @IsOptional()
+  @IsUUID()
+  cardId?: string;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

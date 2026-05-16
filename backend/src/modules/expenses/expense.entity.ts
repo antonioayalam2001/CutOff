@@ -37,6 +37,24 @@ export class Expense {
   @Column({ type: 'uuid', nullable: true })
   installmentGroupId: string;
 
+  @Column({ type: 'boolean', default: false })
+  isRecurring: boolean;
+
+  @Column({ type: 'int', nullable: true })
+  recurringTotalMonths: number;
+
+  @Column({ type: 'int', nullable: true })
+  recurringCurrentMonth: number;
+
+  @Column({ type: 'uuid', nullable: true })
+  recurringGroupId: string;
+
+  @Column({ type: 'boolean', default: false })
+  isSplit: boolean;
+
+  @Column({ type: 'uuid', nullable: true })
+  splitGroupId: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
