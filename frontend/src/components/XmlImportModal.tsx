@@ -6,9 +6,6 @@ import { parseFile } from '@/lib/api';
 import { Card } from '@/types';
 import { Select } from '@/components/ui/Select';
 
-const IMAGE_SUPPORTED_IDS = ['santander', 'generico'];
-const XML_ONLY_ID = 'hsbc';
-
 interface MemberOption {
   userId: string;
   userName: string;
@@ -145,18 +142,6 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
   const cardName = useMemo(() => cardMap.get(cardId) || '', [cardMap, cardId]);
 
   const selectedCard = useMemo(() => cards.find((c) => c.id === cardId), [cards, cardId]);
-  const isHsbc = useMemo(
-    () => selectedCard?.bankProfileId === XML_ONLY_ID,
-    [selectedCard],
-  );
-  const canImportImage = useMemo(
-    () => selectedCard?.bankProfileId == null || IMAGE_SUPPORTED_IDS.includes(selectedCard.bankProfileId) || isHsbc,
-    [selectedCard, isHsbc],
-  );
-  const imageOnly = useMemo(
-    () => selectedCard?.bankProfileId != null && !isHsbc,
-    [selectedCard, isHsbc],
-  );
 
   const initEditRef = (parsed: ParsedTransaction[]) => {
     const map = new Map<string, { date: string; amount: string; concept: string; userId: string }>();
@@ -178,11 +163,6 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
 
     if (!isXml && !isImage) {
       setError('Solo se permiten archivos XML o imágenes (PNG/JPG)');
-      return;
-    }
-
-    if (isXml && !isHsbc) {
-      setError('La importación XML solo está disponible para tarjetas HSBC.');
       return;
     }
 
@@ -327,7 +307,7 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
                 </div>
                 <p className="text-base-600 text-sm">Extrayendo transacciones con OCR</p>
               </div>
-            ) : isHsbc ? (
+            ) : (
               <div
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
@@ -343,29 +323,6 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
                   ref={fileInputRef}
                   type="file"
                   accept=".xml,.png,.jpg,.jpeg"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFile(file);
-                  }}
-                />
-              </div>
-            ) : (
-              <div
-                onDrop={handleDrop}
-                onDragOver={(e) => e.preventDefault()}
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-base-700 hover:border-primary-500/50 rounded-xl p-12 text-center cursor-pointer transition-colors"
-              >
-                <svg className="w-10 h-10 mx-auto text-base-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p className="text-base-300 font-medium">Arrastra una imagen aquí o haz clic para seleccionar</p>
-                <p className="text-base-600 text-sm mt-1">Captura de pantalla del estado de cuenta bancario (PNG/JPG)</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".png,.jpg,.jpeg"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
