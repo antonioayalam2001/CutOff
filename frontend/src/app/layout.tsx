@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { DM_Serif_Display, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import { Layout } from '@/components/Layout';
+import { NavigationLoader } from '@/components/NavigationLoader';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 import './globals.css';
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}>
       <body>
         <QueryClientProvider client={queryClient}>
+          <NavigationLoader />
           <AuthInitializer>{children}</AuthInitializer>
           <Toaster
             position="top-right"

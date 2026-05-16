@@ -84,4 +84,24 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  @keyframes loading-bar {
+    0% { width: 0%; margin-left: 0; }
+    30% { width: 30%; margin-left: 0; }
+    70% { width: 60%; margin-left: 40%; }
+    100% { width: 100%; margin-left: 100%; }
+  }
+
+  .animate-loading-bar {
+    animation: loading-bar 1.2s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.7; }
+  }
+
+  .animate-skeleton {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+  }
 }
