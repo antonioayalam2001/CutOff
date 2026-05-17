@@ -1,6 +1,4 @@
-import {
-  Injectable, NotFoundException, ConflictException, BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { nanoid } from 'nanoid';
@@ -49,7 +47,7 @@ export class GroupsService {
   async findById(id: string): Promise<Group> {
     const group = await this.groupRepository.findOne({
       where: { id },
-      relations: ['owner', 'members', 'members.user'],
+      relations: ['owner'],
     });
     if (!group) throw new NotFoundException('Group not found');
     return group;
@@ -85,11 +83,7 @@ export class GroupsService {
     });
   }
 
-  async updateMemberStatus(
-    groupId: string,
-    memberId: string,
-    dto: UpdateMemberStatusDto,
-  ): Promise<GroupMember> {
+  async updateMemberStatus(groupId: string, memberId: string, dto: UpdateMemberStatusDto): Promise<GroupMember> {
     const member = await this.groupMemberRepository.findOne({
       where: { id: memberId, groupId },
     });

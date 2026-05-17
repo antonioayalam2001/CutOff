@@ -1,6 +1,4 @@
-import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Group } from '../groups/group.entity';
 import { GroupMember } from '../groups/group-member.entity';
 import { Expense } from '../expenses/expense.entity';

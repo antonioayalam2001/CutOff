@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsNumber, IsDateString, IsBoolean, IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsDateString,
+  IsBoolean,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ExpenseSplitDto } from './create-expense.dto';
 

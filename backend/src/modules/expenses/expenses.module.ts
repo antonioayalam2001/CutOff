@@ -7,11 +7,7 @@ import { GroupsModule } from '../groups/groups.module';
 import { CardsModule } from '../cards/cards.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Expense]),
-    GroupsModule,
-    CardsModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Expense]), GroupsModule, CardsModule],
   controllers: [ExpensesController],
   providers: [ExpensesService],
   exports: [ExpensesService, TypeOrmModule],

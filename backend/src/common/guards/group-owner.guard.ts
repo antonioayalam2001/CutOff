@@ -1,6 +1,4 @@
-import {
-  CanActivate, ExecutionContext, Injectable, NotFoundException, ForbiddenException,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Group } from '../../modules/groups/group.entity';

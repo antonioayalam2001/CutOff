@@ -1,11 +1,10 @@
-import {
-  Controller, Get, Post, Patch, Param, Body, UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { JoinGroupDto } from './dto/join-group.dto';
 import { UpdateMemberStatusDto } from './dto/update-member-status.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { GroupMemberGuard } from '../../common/guards/group-member.guard';
 import { GroupOwnerGuard } from '../../common/guards/group-owner.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -31,13 +30,13 @@ export class GroupsController {
     return this.groupsService.join(userId, dto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, GroupMemberGuard)
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.groupsService.findById(id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, GroupMemberGuard)
   @Get(':id/members')
   getMembers(@Param('id') id: string) {
     return this.groupsService.getMembers(id);

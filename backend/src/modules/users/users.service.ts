@@ -31,4 +31,10 @@ export class UsersService {
     Object.assign(user, dto);
     return this.userRepository.save(user);
   }
+
+  async updatePassword(id: string, password: string): Promise<User> {
+    const user = await this.findById(id);
+    user.password = password;
+    return this.userRepository.save(user);
+  }
 }

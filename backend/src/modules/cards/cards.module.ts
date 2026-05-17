@@ -6,10 +6,7 @@ import { CardsController } from './cards.controller';
 import { GroupsModule } from '../groups/groups.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Card]),
-    GroupsModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Card]), GroupsModule],
   controllers: [CardsController],
   providers: [CardsService],
   exports: [CardsService, TypeOrmModule],

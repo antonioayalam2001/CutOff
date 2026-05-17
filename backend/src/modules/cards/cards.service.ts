@@ -1,6 +1,4 @@
-import {
-  Injectable, NotFoundException, BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Card } from './card.entity';
@@ -50,9 +48,7 @@ export class CardsService {
 
   private validateDays(cutOffDay: number, paymentDeadlineDay: number): void {
     if (cutOffDay === paymentDeadlineDay) {
-      throw new BadRequestException(
-        'cutOffDay and paymentDeadlineDay must be different',
-      );
+      throw new BadRequestException('cutOffDay and paymentDeadlineDay must be different');
     }
   }
 }

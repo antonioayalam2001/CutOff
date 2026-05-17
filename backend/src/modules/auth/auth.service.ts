@@ -58,13 +58,15 @@ export class AuthService {
       expiresAt,
     });
 
-    const resetUrl = `http://localhost:3000/reset-password?token=${token}`;
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('  SOLICITUD DE RESTABLECIMIENTO DE CONTRASEÑA');
-    console.log(`  Para: ${dto.email}`);
-    console.log(`  Enlace: ${resetUrl}`);
-    console.log(`  Válido hasta: ${expiresAt.toLocaleString()}`);
-    console.log('═══════════════════════════════════════════════════════');
+    if (process.env.NODE_ENV !== 'production') {
+      const resetUrl = `http://localhost:3000/reset-password?token=${token}`;
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('  SOLICITUD DE RESTABLECIMIENTO DE CONTRASEÑA');
+      console.log(`  Para: ${dto.email}`);
+      console.log(`  Enlace: ${resetUrl}`);
+      console.log(`  Válido hasta: ${expiresAt.toLocaleString()}`);
+      console.log('═══════════════════════════════════════════════════════');
+    }
 
     return { message: 'Si el correo existe, recibirás un enlace para restablecer tu contraseña' };
   }
@@ -88,8 +90,7 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    user.password = hashedPassword;
-    await this.usersService.update(user.id, { password: hashedPassword } as any);
+    await this.usersService.updatePassword(user.id, hashedPassword);
 
     resetToken.used = true;
     await this.resetTokenRepository.save(resetToken);
