@@ -1,6 +1,12 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn,
-  ManyToOne, JoinColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
 } from 'typeorm';
 import { Card } from '../cards/card.entity';
 import { User } from '../users/user.entity';
@@ -10,9 +16,11 @@ export class Expense {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column({ type: 'uuid' })
   cardId: string;
 
+  @Index()
   @Column({ type: 'uuid' })
   userId: string;
 
@@ -22,6 +30,7 @@ export class Expense {
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   amount: number;
 
+  @Index()
   @Column({ type: 'date' })
   transactionDate: string;
 
@@ -34,6 +43,7 @@ export class Expense {
   @Column({ type: 'int', nullable: true })
   currentInstallment: number;
 
+  @Index()
   @Column({ type: 'uuid', nullable: true })
   installmentGroupId: string;
 
@@ -46,12 +56,14 @@ export class Expense {
   @Column({ type: 'int', nullable: true })
   recurringCurrentMonth: number;
 
+  @Index()
   @Column({ type: 'uuid', nullable: true })
   recurringGroupId: string;
 
   @Column({ type: 'boolean', default: false })
   isSplit: boolean;
 
+  @Index()
   @Column({ type: 'uuid', nullable: true })
   splitGroupId: string;
 

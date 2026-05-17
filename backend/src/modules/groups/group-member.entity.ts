@@ -1,6 +1,12 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  ManyToOne, JoinColumn, Unique,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Unique,
+  Index,
 } from 'typeorm';
 import { Group } from './group.entity';
 import { User } from '../users/user.entity';
@@ -12,12 +18,14 @@ export class GroupMember {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column({ type: 'uuid' })
   groupId: string;
 
   @Column({ type: 'uuid' })
   userId: string;
 
+  @Index()
   @Column({ type: 'enum', enum: MemberStatus, default: MemberStatus.PENDING })
   status: MemberStatus;
 

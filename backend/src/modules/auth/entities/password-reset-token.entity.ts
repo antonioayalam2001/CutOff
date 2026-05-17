@@ -5,6 +5,7 @@ export class PasswordResetToken {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column({ type: 'varchar', length: 255 })
   email: string;
 
@@ -12,6 +13,7 @@ export class PasswordResetToken {
   @Column({ type: 'varchar', length: 64 })
   token: string;
 
+  @Index()
   @Column({ type: 'timestamp' })
   expiresAt: Date;
 

@@ -2,9 +2,8 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 import { CardsService } from '../cards/cards.service';
 import { ExpensesService } from '../expenses/expenses.service';
 import { GroupsService } from '../groups/groups.service';
-import {
-  ExpenseSummary, CardSummary, UserBillingSummary, BillingResponse,
-} from './billing.types';
+import { Expense } from '../expenses/expense.entity';
+import { ExpenseSummary, CardSummary, UserBillingSummary, BillingResponse } from './billing.types';
 
 @Injectable()
 export class BillingService {
@@ -14,12 +13,7 @@ export class BillingService {
     private readonly expensesService: ExpensesService,
   ) {}
 
-  async getSummary(
-    groupId: string,
-    userId: string,
-    year?: number,
-    month?: number,
-  ): Promise<BillingResponse> {
+  async getSummary(groupId: string, userId: string, year?: number, month?: number): Promise<BillingResponse> {
     const now = new Date();
     const refYear = year ?? now.getFullYear();
     const refMonth = month !== undefined ? month - 1 : now.getMonth();
@@ -51,16 +45,9 @@ export class BillingService {
   ): Promise<UserBillingSummary> {
     const cards = await this.cardsService.findByGroup(groupId);
     const cardIds = cards.map((c) => c.id);
-    const allExpenses = await this.expensesService.findByCardIds(cardIds);
+    const userExpenses = await this.expensesService.findByCardIds(cardIds, targetUserId);
 
-    const userExpenses = allExpenses.filter(
-      (e) => e.userId === targetUserId && e.user,
-    );
-
-    const userName =
-      userExpenses.length > 0
-        ? userExpenses[0].user?.name || 'Unknown'
-        : 'Unknown';
+    const userName = userExpenses.length > 0 ? userExpenses[0].user?.name || 'Unknown' : 'Unknown';
 
     const cardSummaries: CardSummary[] = cards.map((card) => {
       const cardExpenses = userExpenses.filter((e) => e.cardId === card.id);
@@ -79,14 +66,8 @@ export class BillingService {
       };
     });
 
-    const totalCurrentCycle = cardSummaries.reduce(
-      (sum, c) => sum + c.currentCycleTotal,
-      0,
-    );
-    const totalNextCycle = cardSummaries.reduce(
-      (sum, c) => sum + c.nextCycleTotal,
-      0,
-    );
+    const totalCurrentCycle = cardSummaries.reduce((sum, c) => sum + c.currentCycleTotal, 0);
+    const totalNextCycle = cardSummaries.reduce((sum, c) => sum + c.nextCycleTotal, 0);
 
     return {
       userId: targetUserId,
@@ -98,7 +79,7 @@ export class BillingService {
   }
 
   private classifyExpenses(
-    expenses: any[],
+    expenses: Expense[],
     cutOffDay: number,
     refYear: number,
     refMonth: number,
@@ -114,11 +95,17 @@ export class BillingService {
 
     let currentStartMonth = currentEndMonth - 1;
     let currentStartYear = currentEndYear;
-    if (currentStartMonth < 0) { currentStartMonth = 11; currentStartYear--; }
+    if (currentStartMonth < 0) {
+      currentStartMonth = 11;
+      currentStartYear--;
+    }
 
     let nextEndMonth = currentEndMonth + 1;
     let nextEndYear = currentEndYear;
-    if (nextEndMonth > 11) { nextEndMonth = 0; nextEndYear++; }
+    if (nextEndMonth > 11) {
+      nextEndMonth = 0;
+      nextEndYear++;
+    }
 
     const currentStartKey = ymd(currentStartYear, currentStartMonth, cutOffDay + 1);
     const currentEndKey = ymd(currentEndYear, currentEndMonth, cutOffDay);
@@ -131,12 +118,12 @@ export class BillingService {
       .filter((e) => {
         const tx = new Date(e.transactionDate);
         const key = ymd(tx.getFullYear(), tx.getMonth(), tx.getDate());
-        return (key >= currentStartKey && key <= nextEndKey);
+        return key >= currentStartKey && key <= nextEndKey;
       })
       .map((e) => {
         const tx = new Date(e.transactionDate);
         const key = ymd(tx.getFullYear(), tx.getMonth(), tx.getDate());
-        const amount = parseFloat(e.amount);
+        const amount = typeof e.amount === 'string' ? parseFloat(e.amount) : e.amount;
 
         let cycle: 'current' | 'next';
         if (key >= currentStartKey && key <= currentEndKey) {

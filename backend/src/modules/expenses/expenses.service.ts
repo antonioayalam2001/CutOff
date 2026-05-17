@@ -1,11 +1,9 @@
-import {
-  Injectable, NotFoundException, ForbiddenException, BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual, LessThanOrEqual, Between, In, ILike } from 'typeorm';
+import { DataSource, Repository, MoreThanOrEqual, LessThanOrEqual, Between, In, ILike } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Expense } from './expense.entity';
-import { CreateExpenseDto, ExpenseSplitDto } from './dto/create-expense.dto';
+import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { FindAllExpensesDto } from './dto/find-all-expenses.dto';
 import { GroupsService } from '../groups/groups.service';
@@ -18,25 +16,63 @@ export class ExpensesService {
     private readonly expenseRepository: Repository<Expense>,
     private readonly groupsService: GroupsService,
     private readonly cardsService: CardsService,
+    private readonly dataSource: DataSource,
   ) {}
+
+  private async runInTransaction<T>(fn: (repo: Repository<Expense>) => Promise<T>): Promise<T> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const repo = queryRunner.manager.getRepository(Expense);
+      const result = await fn(repo);
+      await queryRunner.commitTransaction();
+      return result;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
 
   async bulkCreate(groupId: string, userId: string, dtos: CreateExpenseDto[]): Promise<Expense[]> {
     if (dtos.length === 0) {
       throw new BadRequestException('No expenses provided');
     }
-    const results: Expense[] = [];
-    for (const dto of dtos) {
-      const created = await this.create(groupId, userId, dto);
-      results.push(...created);
+
+    const isOwner = await this.groupsService.isOwner(groupId, userId);
+
+    if (!isOwner) {
+      const members = await this.groupsService.getApprovedMemberIds(groupId);
+      if (!members.includes(userId)) {
+        throw new ForbiddenException('You are not an approved member');
+      }
     }
-    return results;
+
+    for (const dto of dtos) {
+      if (dto.isSplit && !isOwner) {
+        throw new ForbiddenException('Only the group owner can create split expenses');
+      }
+
+      const card = await this.cardsService.findById(dto.cardId);
+      if (card.groupId !== groupId) {
+        throw new BadRequestException(`Card ${dto.cardId} does not belong to this group`);
+      }
+    }
+
+    return this.runInTransaction(async (repo) => {
+      const results: Expense[] = [];
+      for (const dto of dtos) {
+        const targetUserId = isOwner && dto.userId ? dto.userId : userId;
+        const created = await this.createInternal(repo, groupId, targetUserId, dto);
+        results.push(...created);
+      }
+      return results;
+    });
   }
 
-  async create(
-    groupId: string,
-    userId: string,
-    dto: CreateExpenseDto,
-  ): Promise<Expense[]> {
+  async create(groupId: string, userId: string, dto: CreateExpenseDto): Promise<Expense[]> {
     const isOwner = await this.groupsService.isOwner(groupId, userId);
     const targetUserId = isOwner && dto.userId ? dto.userId : userId;
 
@@ -60,23 +96,32 @@ export class ExpensesService {
       throw new BadRequestException('Card does not belong to this group');
     }
 
+    return this.runInTransaction(async (repo) => this.createInternal(repo, groupId, targetUserId, dto));
+  }
+
+  private async createInternal(
+    repo: Repository<Expense>,
+    groupId: string,
+    targetUserId: string,
+    dto: CreateExpenseDto,
+  ): Promise<Expense[]> {
     if (dto.isMSI && dto.isSplit) {
-      return this.createSplitMSIExpenses(dto);
+      return this.createSplitMSIExpenses(repo, dto);
     }
 
     if (dto.isMSI) {
-      return this.createMSIExpenses(targetUserId, dto);
+      return this.createMSIExpenses(repo, targetUserId, dto);
     }
 
     if (dto.isSplit) {
-      return this.createSplitExpenses(groupId, isOwner, userId, dto);
+      return this.createSplitExpenses(repo, groupId, dto);
     }
 
     if (dto.isRecurring) {
-      return this.createRecurringExpenses(targetUserId, dto);
+      return this.createRecurringExpenses(repo, targetUserId, dto);
     }
 
-    const expense = this.expenseRepository.create({
+    const expense = repo.create({
       cardId: dto.cardId,
       userId: targetUserId,
       concept: dto.concept,
@@ -84,11 +129,12 @@ export class ExpensesService {
       transactionDate: dto.transactionDate,
       isMSI: false,
     });
-    const saved = await this.expenseRepository.save(expense);
+    const saved = await repo.save(expense);
     return [saved];
   }
 
   private async createRecurringExpenses(
+    repo: Repository<Expense>,
     userId: string,
     dto: CreateExpenseDto,
   ): Promise<Expense[]> {
@@ -106,7 +152,7 @@ export class ExpensesService {
       date.setMonth(date.getMonth() + (i - 1));
       const transactionDate = date.toISOString().split('T')[0];
 
-      const expense = this.expenseRepository.create({
+      const expense = repo.create({
         cardId: dto.cardId,
         userId,
         concept: dto.concept,
@@ -120,13 +166,12 @@ export class ExpensesService {
       expenses.push(expense);
     }
 
-    return this.expenseRepository.save(expenses);
+    return repo.save(expenses);
   }
 
   private async createSplitExpenses(
+    repo: Repository<Expense>,
     groupId: string,
-    isOwner: boolean,
-    userId: string,
     dto: CreateExpenseDto,
   ): Promise<Expense[]> {
     if (!dto.splits || dto.splits.length < 2) {
@@ -148,11 +193,11 @@ export class ExpensesService {
     const splitGroupId = uuidv4();
 
     if (dto.isRecurring) {
-      return this.createSplitRecurringExpenses(dto, splitGroupId);
+      return this.createSplitRecurringExpenses(repo, dto);
     }
 
     const expenses = dto.splits.map((split) =>
-      this.expenseRepository.create({
+      repo.create({
         cardId: dto.cardId,
         userId: split.userId,
         concept: dto.concept,
@@ -163,13 +208,10 @@ export class ExpensesService {
       }),
     );
 
-    return this.expenseRepository.save(expenses);
+    return repo.save(expenses);
   }
 
-  private async createSplitRecurringExpenses(
-    dto: CreateExpenseDto,
-    splitGroupId?: string,
-  ): Promise<Expense[]> {
+  private async createSplitRecurringExpenses(repo: Repository<Expense>, dto: CreateExpenseDto): Promise<Expense[]> {
     const totalMonths = dto.recurringMonths || 2;
     if (totalMonths < 2) {
       throw new BadRequestException('Recurring requires at least 2 months');
@@ -185,8 +227,8 @@ export class ExpensesService {
       const transactionDate = date.toISOString().split('T')[0];
       const monthSplitGroupId = uuidv4();
 
-      for (const split of dto.splits) {
-        const expense = this.expenseRepository.create({
+      for (const split of dto.splits!) {
+        const expense = repo.create({
           cardId: dto.cardId,
           userId: split.userId,
           concept: dto.concept,
@@ -203,12 +245,10 @@ export class ExpensesService {
       }
     }
 
-    return this.expenseRepository.save(allExpenses);
+    return repo.save(allExpenses);
   }
 
-  private async createSplitMSIExpenses(
-    dto: CreateExpenseDto,
-  ): Promise<Expense[]> {
+  private async createSplitMSIExpenses(repo: Repository<Expense>, dto: CreateExpenseDto): Promise<Expense[]> {
     const totalInstallments = dto.totalInstallments || 2;
     if (totalInstallments < 2) {
       throw new BadRequestException('MSI requires at least 2 installments');
@@ -244,7 +284,7 @@ export class ExpensesService {
 
       for (let j = 0; j < numUsers; j++) {
         const amount = j === numUsers - 1 ? userRemainder : perUser;
-        const expense = this.expenseRepository.create({
+        const expense = repo.create({
           cardId: dto.cardId,
           userId: dto.splits[j].userId,
           concept: dto.concept,
@@ -261,10 +301,11 @@ export class ExpensesService {
       }
     }
 
-    return this.expenseRepository.save(expenses);
+    return repo.save(expenses);
   }
 
   private async createMSIExpenses(
+    repo: Repository<Expense>,
     userId: string,
     dto: CreateExpenseDto,
   ): Promise<Expense[]> {
@@ -286,7 +327,7 @@ export class ExpensesService {
       date.setMonth(date.getMonth() + (i - 1));
       const transactionDate = date.toISOString().split('T')[0];
 
-      const expense = this.expenseRepository.create({
+      const expense = repo.create({
         cardId: dto.cardId,
         userId,
         concept: dto.concept,
@@ -300,7 +341,7 @@ export class ExpensesService {
       expenses.push(expense);
     }
 
-    return this.expenseRepository.save(expenses);
+    return repo.save(expenses);
   }
 
   async findAll(
@@ -315,7 +356,7 @@ export class ExpensesService {
     totalPages: number;
   }> {
     const isOwner = await this.groupsService.isOwner(groupId, userId);
-    const { page, limit, dateFrom, dateTo, cardId, search } = query;
+    const { page = 1, limit = 10, dateFrom, dateTo, cardId, search } = query;
 
     const memberFilter = isOwner ? {} : { userId };
 
@@ -353,18 +394,20 @@ export class ExpensesService {
         if (!se.user) continue;
         const key = se.splitGroupId;
         if (!splitUsersMap.has(key)) splitUsersMap.set(key, []);
-        if (!splitUsersMap.get(key).some((u) => u.id === se.user.id)) {
-          splitUsersMap.get(key).push({ id: se.user.id, name: se.user.name });
+        const users = splitUsersMap.get(key)!;
+        if (!users.some((u) => u.id === se.user.id)) {
+          users.push({ id: se.user.id, name: se.user.name });
         }
       }
       for (const expense of data) {
         if (expense.splitGroupId && splitUsersMap.has(expense.splitGroupId)) {
-          (expense as any).splitUsers = splitUsersMap.get(expense.splitGroupId);
+          (expense as any).splitUsers = splitUsersMap.get(expense.splitGroupId)!;
         }
       }
     }
 
-    return { data: data as any, total, page, limit, totalPages: Math.ceil(total / limit) };
+    const resultData: (Expense & { splitUsers?: { id: string; name: string }[] })[] = data as any;
+    return { data: resultData, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   private buildWhereClause(
@@ -399,20 +442,15 @@ export class ExpensesService {
     return expense;
   }
 
-  async findByCardIds(cardIds: string[]): Promise<Expense[]> {
+  async findByCardIds(cardIds: string[], userId?: string): Promise<Expense[]> {
     if (cardIds.length === 0) return [];
     return this.expenseRepository.find({
-      where: cardIds.map((id) => ({ cardId: id })),
+      where: cardIds.map((id) => ({ cardId: id, ...(userId ? { userId } : {}) })),
       relations: ['card', 'user'],
     });
   }
 
-  async update(
-    groupId: string,
-    expenseId: string,
-    userId: string,
-    dto: UpdateExpenseDto,
-  ): Promise<Expense> {
+  async update(groupId: string, expenseId: string, userId: string, dto: UpdateExpenseDto): Promise<Expense> {
     const isOwner = await this.groupsService.isOwner(groupId, userId);
     if (!isOwner) {
       throw new ForbiddenException('Only the group owner can update expenses');
@@ -469,7 +507,13 @@ export class ExpensesService {
     if (expense.installmentGroupId) {
       await this.expenseRepository.update({ installmentGroupId: expense.installmentGroupId }, updateData);
     } else if (expense.recurringGroupId) {
-      await this.expenseRepository.update({ recurringGroupId: expense.recurringGroupId, recurringCurrentMonth: MoreThanOrEqual(expense.recurringCurrentMonth) }, updateData);
+      await this.expenseRepository.update(
+        {
+          recurringGroupId: expense.recurringGroupId,
+          recurringCurrentMonth: MoreThanOrEqual(expense.recurringCurrentMonth),
+        },
+        updateData,
+      );
     } else if (expense.splitGroupId) {
       await this.expenseRepository.update({ splitGroupId: expense.splitGroupId }, updateData);
     } else {
@@ -492,44 +536,55 @@ export class ExpensesService {
     const toDelete = expenses.filter((e) => groupCardIds.includes(e.cardId));
     if (toDelete.length === 0) return { deleted: 0 };
 
-    const msiGroupIds = [...new Set(toDelete.filter((e) => e.isMSI && e.installmentGroupId).map((e) => e.installmentGroupId))];
-    const recurringGroupIds = [...new Set(toDelete.filter((e) => e.isRecurring && e.recurringGroupId).map((e) => e.recurringGroupId))];
-    const splitGroupIds = [...new Set(toDelete.filter((e) => e.isSplit && e.splitGroupId && !e.isRecurring).map((e) => e.splitGroupId))];
+    const msiGroupIds = [
+      ...new Set(toDelete.filter((e) => e.isMSI && e.installmentGroupId).map((e) => e.installmentGroupId)),
+    ];
+    const recurringGroupIds = [
+      ...new Set(toDelete.filter((e) => e.isRecurring && e.recurringGroupId).map((e) => e.recurringGroupId)),
+    ];
+    const splitGroupIds = [
+      ...new Set(toDelete.filter((e) => e.isSplit && e.splitGroupId && !e.isRecurring).map((e) => e.splitGroupId)),
+    ];
 
     const simpleToDelete = toDelete.filter(
-      (e) => (!e.isMSI || !e.installmentGroupId) && (!e.isRecurring || !e.recurringGroupId) && (!e.isSplit || !e.splitGroupId),
+      (e) =>
+        (!e.isMSI || !e.installmentGroupId) &&
+        (!e.isRecurring || !e.recurringGroupId) &&
+        (!e.isSplit || !e.splitGroupId),
     );
 
-    let count = 0;
+    return this.runInTransaction(async (repo) => {
+      let count = 0;
 
-    if (simpleToDelete.length > 0) {
-      await this.expenseRepository.remove(simpleToDelete);
-      count += simpleToDelete.length;
-    }
+      if (simpleToDelete.length > 0) {
+        await repo.remove(simpleToDelete);
+        count += simpleToDelete.length;
+      }
 
-    for (const igId of msiGroupIds) {
-      const result = await this.expenseRepository.delete({ installmentGroupId: igId });
-      count += result.affected || 0;
-    }
-
-    for (const rgId of recurringGroupIds) {
-      const target = toDelete.find((e) => e.recurringGroupId === rgId);
-      if (target) {
-        const minMonth = target.recurringCurrentMonth;
-        const result = await this.expenseRepository.delete({
-          recurringGroupId: rgId,
-          recurringCurrentMonth: MoreThanOrEqual(minMonth),
-        });
+      for (const igId of msiGroupIds) {
+        const result = await repo.delete({ installmentGroupId: igId });
         count += result.affected || 0;
       }
-    }
 
-    for (const sgId of splitGroupIds) {
-      const result = await this.expenseRepository.delete({ splitGroupId: sgId });
-      count += result.affected || 0;
-    }
+      for (const rgId of recurringGroupIds) {
+        const target = toDelete.find((e) => e.recurringGroupId === rgId);
+        if (target) {
+          const minMonth = target.recurringCurrentMonth;
+          const result = await repo.delete({
+            recurringGroupId: rgId,
+            recurringCurrentMonth: MoreThanOrEqual(minMonth),
+          });
+          count += result.affected || 0;
+        }
+      }
 
-    return { deleted: count };
+      for (const sgId of splitGroupIds) {
+        const result = await repo.delete({ splitGroupId: sgId });
+        count += result.affected || 0;
+      }
+
+      return { deleted: count };
+    });
   }
 
   async delete(groupId: string, expenseId: string, userId: string): Promise<void> {
@@ -541,25 +596,27 @@ export class ExpensesService {
     const card = await this.cardsService.findById(expense.cardId);
     if (card.groupId !== groupId) throw new BadRequestException('Expense does not belong to this group');
 
-    if (expense.installmentGroupId) {
-      await this.expenseRepository.delete({ installmentGroupId: expense.installmentGroupId });
-      return;
-    }
+    await this.runInTransaction(async (repo) => {
+      if (expense.installmentGroupId) {
+        await repo.delete({ installmentGroupId: expense.installmentGroupId });
+        return;
+      }
 
-    if (expense.recurringGroupId) {
-      await this.expenseRepository.delete({
-        recurringGroupId: expense.recurringGroupId,
-        recurringCurrentMonth: MoreThanOrEqual(expense.recurringCurrentMonth),
-      });
-      return;
-    }
+      if (expense.recurringGroupId) {
+        await repo.delete({
+          recurringGroupId: expense.recurringGroupId,
+          recurringCurrentMonth: MoreThanOrEqual(expense.recurringCurrentMonth),
+        });
+        return;
+      }
 
-    if (expense.splitGroupId) {
-      await this.expenseRepository.delete({ splitGroupId: expense.splitGroupId });
-      return;
-    }
+      if (expense.splitGroupId) {
+        await repo.delete({ splitGroupId: expense.splitGroupId });
+        return;
+      }
 
-    await this.expenseRepository.remove(expense);
+      await repo.remove(expense);
+    });
   }
 
   private async convertToSplitExpense(
@@ -593,24 +650,27 @@ export class ExpensesService {
       if (newCard.groupId !== groupId) throw new BadRequestException('Card does not belong to this group');
     }
 
-    const splitGroupId = uuidv4();
-    const expenses = dto.splits.map((split) =>
-      this.expenseRepository.create({
-        cardId,
-        userId: split.userId,
-        concept,
-        amount: split.amount,
-        transactionDate,
-        isSplit: true,
-        splitGroupId,
-      }),
-    );
+    const splits = dto.splits!;
+    return this.runInTransaction(async (repo) => {
+      const splitGroupId = uuidv4();
+      const expenses = splits.map((split) =>
+        repo.create({
+          cardId,
+          userId: split.userId,
+          concept,
+          amount: split.amount,
+          transactionDate,
+          isSplit: true,
+          splitGroupId,
+        }),
+      );
 
-    const created = await this.expenseRepository.save(expenses);
+      const created = await repo.save(expenses);
 
-    await this.expenseRepository.remove(originalExpense);
+      await repo.remove(originalExpense);
 
-    return this.findById(created[0].id);
+      return this.findById(created[0].id);
+    });
   }
 
   private roundAmount(value: number): number {

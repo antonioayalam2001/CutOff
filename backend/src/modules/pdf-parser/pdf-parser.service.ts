@@ -6,9 +6,22 @@ export interface ParsedTransaction {
 }
 
 const MONTH_MAP: Record<string, string> = {
-  jan: '01', ene: '01', feb: '02', mar: '03', apr: '04', abr: '04',
-  may: '05', jun: '06', jul: '07', aug: '08', ago: '08',
-  sep: '09', oct: '10', nov: '11', dec: '12', dic: '12',
+  jan: '01',
+  ene: '01',
+  feb: '02',
+  mar: '03',
+  apr: '04',
+  abr: '04',
+  may: '05',
+  jun: '06',
+  jul: '07',
+  aug: '08',
+  ago: '08',
+  sep: '09',
+  oct: '10',
+  nov: '11',
+  dec: '12',
+  dic: '12',
 };
 
 function normalizeDate(str: string): string | null {
@@ -58,24 +71,46 @@ function parseAmountFromOcr(str: string): number | null {
 function parseOcrText(text: string): ParsedTransaction[] {
   const results: ParsedTransaction[] = [];
   const seen = new Set<string>();
+  const dateQueue: string[] = [];
+  const DATE_PATTERN = /(\d{2}-[A-Za-z]{3,4}-\d{4})|(\d{2}[/-]\d{2}[/-]\d{4})/;
 
   for (const line of text.split('\n')) {
-    const dateMatch = line.match(/(\d{2}-[A-Za-z]{3,4}-\d{4})|(\d{2}[/-]\d{2}[/-]\d{4})/);
-    if (!dateMatch) continue;
-    const date = normalizeDate(dateMatch[1] || dateMatch[2]);
-    if (!date) continue;
+    const trimmed = line.trim();
+    if (!trimmed) continue;
 
-    const amounts = [...line.matchAll(/([\d,]+\.\d{2})/g)]
+    const dateMatch = trimmed.match(DATE_PATTERN);
+    const amounts = [...trimmed.matchAll(/([\d,]+\.\d{2})/g)]
       .map((m) => parseAmountFromOcr(m[1]))
       .filter((n): n is number => n !== null);
 
-    if (amounts.length === 0) continue;
-    const amount = amounts[0];
+    if (dateMatch) {
+      const date = normalizeDate(dateMatch[1] || dateMatch[2]);
+      if (date) {
+        if (amounts.length > 0) {
+          for (const amount of amounts) {
+            const key = `${date}|${amount}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              results.push({ date, amount });
+            }
+          }
+        } else {
+          dateQueue.push(date);
+        }
+        continue;
+      }
+    }
 
-    const key = `${date}|${amount}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      results.push({ date, amount });
+    if (amounts.length > 0) {
+      for (const amount of amounts) {
+        const pairedDate = dateQueue.shift();
+        if (!pairedDate) break;
+        const key = `${pairedDate}|${amount}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push({ date: pairedDate, amount });
+        }
+      }
     }
   }
 
@@ -84,7 +119,6 @@ function parseOcrText(text: string): ParsedTransaction[] {
 
 @Injectable()
 export class PdfParserService {
-
   async extractFromImage(buffer: Buffer): Promise<{ transactions: ParsedTransaction[]; ocrRaw: string }> {
     const Tesseract = await import('tesseract.js');
     const worker = await Tesseract.createWorker('spa+eng', Tesseract.OEM.LSTM_ONLY, {
