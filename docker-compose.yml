@@ -5,7 +5,7 @@ services:
     container_name: gastos-db
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: gastos_compartidos
       POSTGRES_USER: devuser
@@ -17,9 +17,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - gastos-network
 
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:8.14
     container_name: gastos-pgadmin
     restart: unless-stopped
     ports:
@@ -32,7 +34,53 @@ services:
         condition: service_healthy
     volumes:
       - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - gastos-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gastos-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: devuser
+      DB_PASSWORD: devpassword
+      DB_DATABASE: gastos_compartidos
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production}
+      JWT_EXPIRES_IN: 7d
+      PORT: 3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - gastos-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gastos-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+    depends_on:
+      - backend
+    networks:
+      - gastos-network
 
 volumes:
   pgdata:
   pgadmin-data:
+
+networks:
+  gastos-network:
+    driver: bridge
