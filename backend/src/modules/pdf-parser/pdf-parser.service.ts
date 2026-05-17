@@ -29,18 +29,22 @@ function normalizeDate(str: string): string | null {
   const isoMatch = s.match(/^(\d{4}-\d{2}-\d{2})/);
   if (isoMatch) return isoMatch[1];
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const dmy = s.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/);
-  if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+  const dmy = s.match(/^(\d{1,2})\s*[\/\-]\s*(\d{1,2})\s*[\/\-]\s*(\d{4})$/);
+  if (dmy) {
+    const d = dmy[1].padStart(2, '0');
+    const m = dmy[2].padStart(2, '0');
+    return `${dmy[3]}-${m}-${d}`;
+  }
   const dmy2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (dmy2) {
     const d = dmy2[1].padStart(2, '0');
     const m = dmy2[2].padStart(2, '0');
     return `${dmy2[3]}-${m}-${d}`;
   }
-  const mon = s.match(/^(\d{2})-([A-Za-z]{3,4})-(\d{4})$/);
+  const mon = s.match(/^(\d{1,2})\s*-\s*([A-Za-z]{3,4})\s*-\s*(\d{4})$/);
   if (mon) {
     const m = MONTH_MAP[mon[2].toLowerCase().slice(0, 3)];
-    if (m) return `${mon[3]}-${m}-${mon[1]}`;
+    if (m) return `${mon[3]}-${m}-${mon[1].padStart(2, '0')}`;
   }
   return null;
 }
@@ -68,20 +72,38 @@ function parseAmountFromOcr(str: string): number | null {
   return null;
 }
 
+function tryParseDollarAmount(line: string): number | null {
+  const m = line.match(/\$[^0-9]*(\d{3,5})(?:\D|$)/);
+  if (!m) return null;
+  const digits = m[1];
+  if (digits.length < 3) return null;
+  const withDecimal = digits.slice(0, -2) + '.' + digits.slice(-2);
+  const n = parseFloat(withDecimal);
+  if (!isNaN(n) && n > 0 && n < 100000) return n;
+  return null;
+}
+
+function extractAmounts(line: string): number[] {
+  const strict = [...line.matchAll(/([\d,]+\.\d{2})/g)]
+    .map((m) => parseAmountFromOcr(m[1]))
+    .filter((n): n is number => n !== null);
+  if (strict.length > 0) return strict;
+  const fallback = tryParseDollarAmount(line);
+  return fallback !== null ? [fallback] : [];
+}
+
 function parseOcrText(text: string): ParsedTransaction[] {
   const results: ParsedTransaction[] = [];
   const seen = new Set<string>();
   const dateQueue: string[] = [];
-  const DATE_PATTERN = /(\d{2}-[A-Za-z]{3,4}-\d{4})|(\d{2}[/-]\d{2}[/-]\d{4})/;
+  const DATE_PATTERN = /(\d{1,2}\s*-\s*[A-Za-z]{3,4}\s*-\s*\d{4})|(\d{1,2}\s*[\/-]\s*\d{1,2}\s*[\/-]\s*\d{4})/;
 
   for (const line of text.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
     const dateMatch = trimmed.match(DATE_PATTERN);
-    const amounts = [...trimmed.matchAll(/([\d,]+\.\d{2})/g)]
-      .map((m) => parseAmountFromOcr(m[1]))
-      .filter((n): n is number => n !== null);
+    const amounts = extractAmounts(trimmed);
 
     if (dateMatch) {
       const date = normalizeDate(dateMatch[1] || dateMatch[2]);
@@ -117,10 +139,23 @@ function parseOcrText(text: string): ParsedTransaction[] {
   return results;
 }
 
+async function preprocessImage(buffer: Buffer): Promise<Buffer> {
+  try {
+    const sharp = await import('sharp');
+    const img = sharp.default(buffer).grayscale().threshold(150).png();
+    return await img.toBuffer();
+  } catch {
+    return buffer;
+  }
+}
+
 @Injectable()
 export class PdfParserService {
   async extractFromImage(buffer: Buffer): Promise<{ transactions: ParsedTransaction[]; ocrRaw: string }> {
     const Tesseract = await import('tesseract.js');
+
+    const processedBuffer = await preprocessImage(buffer);
+
     const worker = await Tesseract.createWorker('spa+eng', Tesseract.OEM.LSTM_ONLY, {
       logger: () => {},
     });
@@ -129,7 +164,7 @@ export class PdfParserService {
       await worker.setParameters({
         tessedit_pageseg_mode: Tesseract.PSM.AUTO,
       });
-      const { data } = await worker.recognize(buffer);
+      const { data } = await worker.recognize(processedBuffer);
       const transactions = parseOcrText(data.text);
       return { transactions, ocrRaw: data.text };
     } finally {
