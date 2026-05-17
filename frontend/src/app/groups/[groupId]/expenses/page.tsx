@@ -1,17 +1,17 @@
 'use client';
 import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { GroupTabs } from '@/components/GroupTabs';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
-import { Input } from '@/components/ui/Input';
-import { DataTable } from '@/components/DataTable';
-import { XmlImportModal } from '@/components/XmlImportModal';
-import { useExpenses, useDeleteExpense, useUpdateExpense, useCreateExpenseBulk, useDeleteExpensesBulk } from '@/hooks/useExpenses';
-import { useCards } from '@/hooks/useCards';
-import { useGroup, useGroupMembers } from '@/hooks/useGroups';
-import { useAuthStore } from '@/stores/authStore';
+import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+import { GroupTabs } from '@/features/groups/components/GroupTabs';
+import { Button } from '@/shared/ui/Button';
+import { Select } from '@/shared/ui/Select';
+import { Input } from '@/shared/ui/Input';
+import { DataTable } from '@/shared/components/DataTable';
+import { XmlImportModal } from '@/features/import/components/XmlImportModal';
+import { useExpenses, useDeleteExpense, useUpdateExpense, useCreateExpenseBulk, useDeleteExpensesBulk } from '@/features/expenses/hooks/useExpenses';
+import { useCards } from '@/features/cards/hooks/useCards';
+import { useGroup, useGroupMembers } from '@/features/groups/hooks/useGroups';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { Expense } from '@/types';
 import { ColumnDef } from '@tanstack/react-table';
 import Link from 'next/link';
@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { DateRange, DayPicker } from 'react-day-picker';
 import 'react-day-picker/style.css';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 
 function ExpensesContent() {
   const { groupId } = useParams<{ groupId: string }>();

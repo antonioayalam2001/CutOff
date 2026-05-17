@@ -1,8 +1,10 @@
 'use client';
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
-import { Select } from './ui/Select';
+import { Button } from '@/shared/ui/Button';
+import { Input } from '@/shared/ui/Input';
+import { Select } from '@/shared/ui/Select';
+import { Toggle } from '@/shared/ui/Toggle';
+import { Checkbox } from '@/shared/ui/Checkbox';
 import { Card, ExpenseSplit } from '@/types';
 
 interface ExpenseFormData {
@@ -43,20 +45,6 @@ interface Props {
   onSubmitEdit?: (expenseId: string, data: ExpenseFormData) => Promise<void>;
   isLoading?: boolean;
   initialData?: InitialExpenseData;
-}
-
-function Toggle({ id, checked, onChange, label, disabled }: { id: string; checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
-  return (
-    <label htmlFor={id} className={`flex items-center gap-3 cursor-pointer group select-none ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}>
-      <div className="relative">
-        <input type="checkbox" id={id} checked={checked} onChange={(e) => { if (!disabled) onChange(e.target.checked); }} className="sr-only" disabled={disabled} />
-        <div className={`w-11 h-6 rounded-full transition-colors duration-300 flex items-center shrink-0 ${checked ? 'bg-primary-500' : 'bg-base-700'}`}>
-          <div className={`w-4 h-4 rounded-full bg-white shadow-md transition-transform duration-300 ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
-        </div>
-      </div>
-      <span className="text-sm text-base-300 group-hover:text-base-200 transition-colors">{label}</span>
-    </label>
-  );
 }
 
 function SectionDivider({ label }: { label: string }) {
@@ -296,15 +284,13 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
                     <div
                       key={m.userId}
                       onClick={() => toggleSplitUser(m.userId)}
-                      className="flex items-center gap-3 cursor-pointer rounded-lg px-3 py-2 transition-colors hover:bg-base-800/60"
+                      onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleSplitUser(m.userId); } }}
+                      role="option"
+                      aria-selected={selectedSplitUsers.has(m.userId)}
+                      tabIndex={0}
+                      className="flex items-center gap-3 cursor-pointer rounded-lg px-3 py-2 transition-colors hover:bg-base-800/60 focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:outline-none"
                     >
-                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${selectedSplitUsers.has(m.userId) ? 'bg-primary-500 border-primary-500' : 'border-base-600'}`}>
-                        {selectedSplitUsers.has(m.userId) && (
-                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
+                      <Checkbox checked={selectedSplitUsers.has(m.userId)} onChange={() => toggleSplitUser(m.userId)} />
                       <span className="text-sm text-base-200">{m.userName}</span>
                     </div>
                   ))}

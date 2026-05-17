@@ -1,11 +1,11 @@
 'use client';
 import { useParams } from 'next/navigation';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { GroupTabs } from '@/components/GroupTabs';
-import { InviteCodeDisplay } from '@/components/InviteCodeDisplay';
-import { useGroup } from '@/hooks/useGroups';
-import { useExpenses } from '@/hooks/useExpenses';
-import { useAuthStore } from '@/stores/authStore';
+import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+import { GroupTabs } from '@/features/groups/components/GroupTabs';
+import { InviteCodeDisplay } from '@/features/groups/components/InviteCodeDisplay';
+import { useGroup } from '@/features/groups/hooks/useGroups';
+import { useExpenses } from '@/features/expenses/hooks/useExpenses';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 function StatCard({ label, value, className }: { label: string; value: string; className?: string }) {
   return (

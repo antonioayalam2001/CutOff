@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const router = useRouter();

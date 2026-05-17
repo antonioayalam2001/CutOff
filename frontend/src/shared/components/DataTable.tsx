@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, memo } from 'react';
 import { useReactTable, getCoreRowModel, flexRender, ColumnDef } from '@tanstack/react-table';
+import { Checkbox } from '@/shared/ui/Checkbox';
 
 interface DataTableProps<T extends { id: string }> {
   columns: ColumnDef<T>[];
@@ -20,30 +21,6 @@ function SkeletonRow({ cols }: { cols: number }) {
         </td>
       ))}
     </tr>
-  );
-}
-
-function Checkbox({ checked, onChange, indeterminate }: { checked: boolean; onChange: () => void; indeterminate?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => { e.stopPropagation(); onChange(); }}
-      className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors shrink-0 ${
-        checked || indeterminate
-          ? 'bg-primary-500 border-primary-500'
-          : 'border-base-600 hover:border-base-500'
-      }`}
-    >
-      {indeterminate ? (
-        <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 12h14" />
-        </svg>
-      ) : checked ? (
-        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-        </svg>
-      ) : null}
-    </button>
   );
 }
 
@@ -105,73 +82,13 @@ function DataTableInner<T extends { id: string }>({
     getCoreRowModel: getCoreRowModel(),
   });
 
-  if (isLoading) {
-    return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-base-800">
-          <thead className="bg-base-950/50 sticky top-0 z-10">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="px-4 py-3 text-left text-xs font-medium text-base-400 uppercase tracking-wider"
-                    style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
-                  >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className="bg-base-900/50 divide-y divide-base-800">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <SkeletonRow key={i} cols={allColumns.length} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-base-800">
-          <thead className="bg-base-950/50 sticky top-0 z-10">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="px-4 py-3 text-left text-xs font-medium text-base-400 uppercase tracking-wider"
-                  >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className="bg-base-900/50 divide-y divide-base-800">
-            <tr>
-              <td colSpan={allColumns.length} className="px-4 py-12 text-center">
-                <div className="flex flex-col items-center gap-2">
-                  <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                  <p className="text-sm text-red-400">{error}</p>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    );
-  }
+  const showSkeleton = isLoading;
+  const showError = !isLoading && error;
+  const showEmpty = !isLoading && !error && table.getRowModel().rows.length === 0;
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-base-800">
+      <table className="min-w-full divide-y divide-base-800" role={showSkeleton ? 'status' : undefined} aria-label={showSkeleton ? 'Cargando datos' : undefined}>
         <thead className="bg-base-950/50 sticky top-0 z-10">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
@@ -188,7 +105,22 @@ function DataTableInner<T extends { id: string }>({
           ))}
         </thead>
         <tbody className="bg-base-900/50 divide-y divide-base-800">
-          {table.getRowModel().rows.length === 0 ? (
+          {showSkeleton ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonRow key={i} cols={allColumns.length} />
+            ))
+          ) : showError ? (
+            <tr>
+              <td colSpan={allColumns.length} className="px-4 py-12 text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
+              </td>
+            </tr>
+          ) : showEmpty ? (
             <tr>
               <td colSpan={allColumns.length} className="px-4 py-12 text-center text-sm text-base-500">
                 No hay datos disponibles

@@ -1,11 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { GroupTabs } from '@/components/GroupTabs';
-import { BillingSummary } from '@/components/BillingSummary';
-import { useBilling } from '@/hooks/useBilling';
-import { useGroup } from '@/hooks/useGroups';
+import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+import { GroupTabs } from '@/features/groups/components/GroupTabs';
+import { BillingSummary } from '@/features/billing/components/BillingSummary';
+import { useBilling } from '@/features/billing/hooks/useBilling';
+import { useGroup } from '@/features/groups/hooks/useGroups';
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',

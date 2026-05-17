@@ -2,7 +2,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 
 interface LayoutProps {
@@ -12,8 +12,10 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuthStore();
-  const { theme, toggle } = useThemeStore();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const theme = useThemeStore((s) => s.theme);
+  const toggleTheme = useThemeStore((s) => s.toggle);
 
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
@@ -23,7 +25,13 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-base-950 transition-colors duration-150">
-      <nav className="glass-nav sticky top-0 z-40">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-500 focus:text-white focus:rounded-lg focus:outline-none"
+      >
+        Saltar al contenido principal
+      </a>
+      <nav className="glass-nav sticky top-0 z-40" aria-label="Navegación principal">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center gap-8">
@@ -53,16 +61,17 @@ export function Layout({ children }: LayoutProps) {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={toggle}
+                onClick={toggleTheme}
                 className="p-2 rounded-lg text-base-400 hover:text-base-200 hover:bg-base-800 transition-all duration-200 active:scale-90"
-                aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
+                aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                aria-pressed={theme !== 'dark'}
               >
                 {theme === 'dark' ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                   </svg>
                 )}
@@ -78,6 +87,7 @@ export function Layout({ children }: LayoutProps) {
                   router.push('/login');
                 }}
                 className="text-sm text-base-500 hover:text-base-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-base-800"
+                aria-label="Cerrar sesión"
               >
                 Cerrar sesión
               </button>
@@ -85,7 +95,7 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </nav>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
         {children}
       </main>
     </div>

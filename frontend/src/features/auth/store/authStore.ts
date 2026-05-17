@@ -12,9 +12,10 @@ interface AuthState {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loadFromStorage: () => void;
+  saveAuth: (data: AuthResponse) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
   isAuthenticated: false,
@@ -41,18 +42,20 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  login: async (email: string, password: string) => {
-    const { data } = await api.post<AuthResponse>('/auth/login', { email, password });
+  saveAuth: (data: AuthResponse) => {
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    set({ user: data.user as User, token: data.token, isAuthenticated: true });
+    set({ user: { ...data.user, createdAt: '', updatedAt: '' }, token: data.token, isAuthenticated: true });
+  },
+
+  login: async (email: string, password: string) => {
+    const { data } = await api.post<AuthResponse>('/auth/login', { email, password });
+    get().saveAuth(data);
   },
 
   register: async (name: string, email: string, password: string) => {
     const { data } = await api.post<AuthResponse>('/auth/register', { name, email, password });
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    set({ user: data.user as User, token: data.token, isAuthenticated: true });
+    get().saveAuth(data);
   },
 
   logout: () => {

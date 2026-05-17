@@ -1,13 +1,13 @@
 'use client';
 import { useParams, useRouter } from 'next/navigation';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { GroupTabs } from '@/components/GroupTabs';
-import { Button } from '@/components/ui/Button';
-import { ExpenseForm } from '@/components/ExpenseForm';
-import { useCards } from '@/hooks/useCards';
-import { useExpense, useUpdateExpense } from '@/hooks/useExpenses';
-import { useGroup, useGroupMembers } from '@/hooks/useGroups';
-import { useAuthStore } from '@/stores/authStore';
+import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+import { GroupTabs } from '@/features/groups/components/GroupTabs';
+import { Button } from '@/shared/ui/Button';
+import { ExpenseForm } from '@/features/expenses/components/ExpenseForm';
+import { useCards } from '@/features/cards/hooks/useCards';
+import { useExpense, useUpdateExpense } from '@/features/expenses/hooks/useExpenses';
+import { useGroup, useGroupMembers } from '@/features/groups/hooks/useGroups';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { toast } from 'sonner';
 
 export default function EditExpensePage() {

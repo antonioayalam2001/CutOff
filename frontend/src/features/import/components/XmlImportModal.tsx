@@ -1,10 +1,10 @@
 'use client';
 import { useState, useRef, useMemo, memo, useCallback, startTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { parseXml, ParsedTransaction } from '@/lib/xml-parser';
-import { parseFile } from '@/lib/api';
+import { parseXml, ParsedTransaction } from '@/features/import/lib/xml-parser';
+import { parseFile } from '@/features/import/lib/parseFile';
 import { Card } from '@/types';
-import { Select } from '@/components/ui/Select';
+import { Select } from '@/shared/ui/Select';
 
 interface MemberOption {
   userId: string;

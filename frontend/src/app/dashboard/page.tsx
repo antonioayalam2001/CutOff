@@ -2,11 +2,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
-import { useGroups, useCreateGroup, useJoinGroup } from '@/hooks/useGroups';
+import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+import { Button } from '@/shared/ui/Button';
+import { Input } from '@/shared/ui/Input';
+import { Modal } from '@/shared/ui/Modal';
+import { useGroups, useCreateGroup, useJoinGroup } from '@/features/groups/hooks/useGroups';
 import { toast } from 'sonner';
 
 export default function DashboardPage() {

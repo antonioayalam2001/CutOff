@@ -58,7 +58,10 @@ export function useDeleteExpense(groupId: string) {
   return useMutation({
     mutationFn: (expenseId: string) =>
       api.delete(`/groups/${groupId}/expenses/${expenseId}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses', groupId] }),
+    onSuccess: (_data, expenseId) => {
+      qc.removeQueries({ queryKey: ['expense', groupId, expenseId] });
+      qc.invalidateQueries({ queryKey: ['expenses', groupId] });
+    },
   });
 }
 
@@ -75,6 +78,9 @@ export function useUpdateExpense(groupId: string) {
   return useMutation({
     mutationFn: ({ expenseId, ...data }: { expenseId: string } & Record<string, unknown>) =>
       api.patch(`/groups/${groupId}/expenses/${expenseId}`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses', groupId] }),
+    onSuccess: (_data, { expenseId }) => {
+      qc.invalidateQueries({ queryKey: ['expense', groupId, expenseId] });
+      qc.invalidateQueries({ queryKey: ['expenses', groupId] });
+    },
   });
 }

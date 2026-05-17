@@ -1,11 +1,11 @@
 'use client';
 import { useParams, useRouter } from 'next/navigation';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { GroupTabs } from '@/components/GroupTabs';
-import { CardForm } from '@/components/CardForm';
-import { useCreateCard } from '@/hooks/useCards';
-import { useGroup } from '@/hooks/useGroups';
-import { useAuthStore } from '@/stores/authStore';
+import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+import { GroupTabs } from '@/features/groups/components/GroupTabs';
+import { CardForm } from '@/features/cards/components/CardForm';
+import { useCreateCard } from '@/features/cards/hooks/useCards';
+import { useGroup } from '@/features/groups/hooks/useGroups';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
 

@@ -1,7 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { Button } from '@/components/ui/Button';
+import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+import { Button } from '@/shared/ui/Button';
 
 export default function JoinPage() {
   const router = useRouter();

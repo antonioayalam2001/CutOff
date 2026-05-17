@@ -88,16 +88,6 @@ export interface CreateExpensePayload {
   splits?: ExpenseSplit[];
 }
 
-export interface CreateExpensePayload {
-  cardId: string;
-  userId?: string;
-  concept: string;
-  amount: number;
-  transactionDate: string;
-  isMSI?: boolean;
-  totalInstallments?: number;
-}
-
 export interface CreateCardPayload {
   name: string;
   lastFourDigits: string;
@@ -149,7 +139,9 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+export type AuthUser = Pick<User, 'id' | 'name' | 'email'>;
+
 export interface AuthResponse {
-  user: { id: string; name: string; email: string };
+  user: AuthUser;
   token: string;
 }

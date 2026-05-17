@@ -1,14 +1,15 @@
 'use client';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { GroupTabs } from '@/components/GroupTabs';
-import { Button } from '@/components/ui/Button';
-import { ExpenseForm } from '@/components/ExpenseForm';
-import { useCards } from '@/hooks/useCards';
-import { useCreateExpense } from '@/hooks/useExpenses';
-import { useGroup, useGroupMembers } from '@/hooks/useGroups';
-import { useAuthStore } from '@/stores/authStore';
+import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+import { GroupTabs } from '@/features/groups/components/GroupTabs';
+import { Button } from '@/shared/ui/Button';
+import { Toggle } from '@/shared/ui/Toggle';
+import { ExpenseForm } from '@/features/expenses/components/ExpenseForm';
+import { useCards } from '@/features/cards/hooks/useCards';
+import { useCreateExpense } from '@/features/expenses/hooks/useExpenses';
+import { useGroup, useGroupMembers } from '@/features/groups/hooks/useGroups';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { toast } from 'sonner';
 
 export default function NewExpensePage() {
@@ -97,22 +98,7 @@ export default function NewExpensePage() {
             />
           </div>
 
-          <label className="flex items-center justify-center gap-3 mt-4 cursor-pointer group">
-            <div className="relative">
-              <input
-                type="checkbox"
-                checked={keepAdding}
-                onChange={(e) => setKeepAdding(e.target.checked)}
-                className="sr-only"
-              />
-              <div className={`w-10 h-6 rounded-full transition-colors duration-200 flex items-center ${keepAdding ? 'bg-primary-500' : 'bg-base-700'}`}>
-                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${keepAdding ? 'translate-x-5' : 'translate-x-1'}`} />
-              </div>
-            </div>
-            <span className="text-sm text-base-400 group-hover:text-base-300 transition-colors">
-              Seguir agregando gastos
-            </span>
-          </label>
+          <Toggle id="keep-adding" checked={keepAdding} onChange={setKeepAdding} label="Seguir agregando gastos" />
         </div>
       </div>
     </ProtectedRoute>

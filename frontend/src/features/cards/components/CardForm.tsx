@@ -1,7 +1,7 @@
 'use client';
 import { useState, useCallback, memo } from 'react';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { Button } from '@/shared/ui/Button';
+import { Input } from '@/shared/ui/Input';
 
 interface FormData {
   name: string;

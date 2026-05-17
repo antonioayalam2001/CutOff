@@ -1,40 +1,6 @@
 'use client';
 import { useState, useMemo, useCallback } from 'react';
-
-interface BillingExpense {
-  id: string;
-  concept: string;
-  amount: number;
-  transactionDate: string;
-  isMSI: boolean;
-  totalInstallments: number | null;
-  currentInstallment: number | null;
-  installmentGroupId: string | null;
-  cycle: 'current' | 'next';
-}
-
-interface CardBillingSummary {
-  cardId: string;
-  cardName: string;
-  lastFourDigits: string;
-  cutOffDay: number;
-  paymentDeadlineDay: number;
-  currentCycleTotal: number;
-  nextCycleTotal: number;
-  expenses: BillingExpense[];
-}
-
-interface UserBillingSummary {
-  userId: string;
-  userName: string;
-  cards: CardBillingSummary[];
-  totalCurrentCycle: number;
-  totalNextCycle: number;
-}
-
-interface BillingResponse {
-  summary: UserBillingSummary[];
-}
+import type { BillingExpense, BillingResponse } from '@/types';
 
 interface Props {
   data: BillingResponse;

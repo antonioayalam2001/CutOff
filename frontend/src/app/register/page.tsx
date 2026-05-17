@@ -2,9 +2,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { useAuthStore } from '@/stores/authStore';
+import { Button } from '@/shared/ui/Button';
+import { Input } from '@/shared/ui/Input';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { toast } from 'sonner';
 
 export default function RegisterPage() {

@@ -19,23 +19,25 @@ export function GroupTabs({ groupId }: Props) {
   const currentPath = pathname.replace(`/groups/${groupId}`, '') || '';
 
   return (
-    <div className="border-b border-base-800 mb-6">
-      <div className="relative">
-        <div className="flex gap-1 -mb-px overflow-x-auto scrollbar-none">
-          {tabs.map((tab) => {
-            const isActive = tab.href === ''
-              ? currentPath === '' || currentPath === `/${groupId}`
-              : currentPath.startsWith(tab.href);
-            return (
-              <Link
-                key={tab.href}
-                href={`/groups/${groupId}${tab.href}`}
-                className={`flex items-center gap-1.5 pb-3 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-all duration-200 rounded-t-lg whitespace-nowrap ${
-                  isActive
-                    ? 'border-primary-500 text-primary-400'
-                    : 'border-transparent text-base-400 hover:text-base-200 hover:border-base-600'
-                }`}
-              >
+    <nav aria-label="Navegación del grupo">
+      <div className="border-b border-base-800 mb-6">
+        <div className="relative">
+          <div className="flex gap-1 -mb-px overflow-x-auto scrollbar-none">
+            {tabs.map((tab) => {
+              const isActive = tab.href === ''
+                ? currentPath === '' || currentPath === `/${groupId}`
+                : currentPath.startsWith(tab.href);
+              return (
+                <Link
+                  key={tab.href}
+                  href={`/groups/${groupId}${tab.href}`}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex items-center gap-1.5 pb-3 px-2 sm:px-3 text-xs sm:text-sm font-medium border-b-2 transition-all duration-200 rounded-t-lg whitespace-nowrap ${
+                    isActive
+                      ? 'border-primary-500 text-primary-400'
+                      : 'border-transparent text-base-400 hover:text-base-200 hover:border-base-600'
+                  }`}
+                >
                 <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
                 </svg>
@@ -44,8 +46,9 @@ export function GroupTabs({ groupId }: Props) {
             );
           })}
         </div>
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-base-950 to-transparent pointer-events-none sm:hidden" />
+          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-base-950 to-transparent pointer-events-none sm:hidden" />
+        </div>
       </div>
-    </div>
+    </nav>
   );
 }
