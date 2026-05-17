@@ -17,6 +17,7 @@ interface PreviewRow {
   amount: number;
   concept: string;
   userId: string;
+  origin?: string;
 }
 
 interface Props {
@@ -37,6 +38,7 @@ interface ImportRowProps {
   amount: number;
   concept: string;
   userId: string;
+  origin?: string;
   isOwner: boolean;
   memberOptions: { value: string; label: string }[];
   cardName: string;
@@ -44,12 +46,13 @@ interface ImportRowProps {
   editRef: React.MutableRefObject<Map<string, { date: string; amount: string; concept: string; userId: string }>>;
   onRemove: (id: string) => void;
   onUserChange: (id: string, userId: string) => void;
+  showOrigin: boolean;
 }
 
 const ImportRow = memo(function ImportRow({
-  id, date, amount, concept, userId,
+  id, date, amount, concept, userId, origin,
   isOwner, memberOptions, cardName, inputClass,
-  editRef, onRemove, onUserChange,
+  editRef, onRemove, onUserChange, showOrigin,
 }: ImportRowProps) {
   return (
     <tr className="hover:bg-base-800/30 transition-colors">
@@ -111,6 +114,17 @@ const ImportRow = memo(function ImportRow({
       <td className="px-3 py-2 text-center">
         <span className="text-base-400 text-xs">{cardName || '-'}</span>
       </td>
+      {showOrigin && (
+        <td className="px-3 py-2 text-center max-w-[100px]">
+          {origin ? (
+            <span className="text-[11px] text-base-500 truncate block" title={origin}>
+              {origin}
+            </span>
+          ) : (
+            <span className="text-[11px] text-base-600">-</span>
+          )}
+        </td>
+      )}
       <td className="px-3 py-2 text-center">
         <button
           onClick={() => onRemove(id)}
@@ -143,17 +157,15 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
 
   const selectedCard = useMemo(() => cards.find((c) => c.id === cardId), [cards, cardId]);
 
-  const initEditRef = (parsed: ParsedTransaction[]) => {
-    const map = new Map<string, { date: string; amount: string; concept: string; userId: string }>();
+  const appendParsed = (parsed: ParsedTransaction[], origin?: string) => {
     const newRows: PreviewRow[] = [];
     parsed.forEach((t) => {
       const id = nextId();
       const userId = isOwner ? '' : currentUserId;
-      map.set(id, { date: t.date, amount: String(t.amount), concept: '', userId });
-      newRows.push({ id, date: t.date, amount: t.amount, concept: '', userId });
+      editRef.current.set(id, { date: t.date, amount: String(t.amount), concept: '', userId });
+      newRows.push({ id, date: t.date, amount: t.amount, concept: '', userId, origin });
     });
-    editRef.current = map;
-    setRows(newRows);
+    setRows((prev) => [...prev, ...newRows]);
   };
 
   const handleFile = async (file: File) => {
@@ -198,7 +210,8 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
       setError('No se encontraron transacciones en el archivo');
       return;
     }
-    initEditRef(parsed);
+    appendParsed(parsed, file.name);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setStep('preview');
   };
 
@@ -207,6 +220,14 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
   };
+
+  const addEmptyRow = useCallback(() => {
+    const id = nextId();
+    const today = new Date().toISOString().split('T')[0];
+    const userId = isOwner ? '' : currentUserId;
+    editRef.current.set(id, { date: today, amount: '0', concept: '', userId });
+    setRows((prev) => [...prev, { id, date: today, amount: 0, concept: '', userId, origin: 'Manual' }]);
+  }, [isOwner, currentUserId]);
 
   const removeRow = useCallback((id: string) => {
     editRef.current.delete(id);
@@ -257,6 +278,8 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
   };
 
   const totalAmount = useMemo(() => rows.reduce((s, r) => s + r.amount, 0), [rows]);
+  const showOrigin = useMemo(() => rows.some((r) => r.origin), [rows]);
+  const hasRows = rows.length > 0;
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(v);
 
@@ -296,6 +319,31 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
 
         {step === 'upload' && (
           <>
+            {hasRows && (
+              <div className="flex items-center justify-between bg-primary-500/10 border border-primary-500/20 rounded-xl px-4 py-3">
+                <p className="text-sm text-base-300">
+                  <span className="text-primary-400 font-medium">{rows.length}</span> gasto{rows.length !== 1 ? 's' : ''} acumulado{rows.length !== 1 ? 's' : ''}
+                  {' — '}Total: <span className="text-primary-400 font-medium">{formatCurrency(totalAmount)}</span>
+                </p>
+                <button
+                  onClick={() => setStep('preview')}
+                  className="text-sm text-primary-400 hover:text-primary-300 transition-colors font-medium"
+                >
+                  Ver preview
+                </button>
+              </div>
+            )}
+            <div className="bg-sky-500/10 border border-sky-500/20 rounded-xl px-4 py-3 text-sm text-base-300">
+              <p className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  Para mejor precisión del OCR, sube la tabla de registros en <strong>imágenes segmentadas</strong> (recorta cada sección del estado de cuenta por separado).
+                </span>
+              </p>
+            </div>
+
             {processing ? (
               <div className="border-2 border-dashed border-base-700 rounded-xl p-12 text-center">
                 <div className="inline-flex items-center gap-3 mb-3">
@@ -341,11 +389,49 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
                 {rows.length} gasto{rows.length !== 1 ? 's' : ''} encontrado{rows.length !== 1 ? 's' : ''}
                 {' — '}Total: <span className="text-primary-400 font-medium">{formatCurrency(totalAmount)}</span>
               </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setRows([]);
+                    editRef.current.clear();
+                    setStep('upload');
+                    setError('');
+                  }}
+                  className="text-sm text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Empezar de nuevo
+                </button>
+                <span className="text-base-700">|</span>
+                <button
+                  onClick={() => { setStep('upload'); setError(''); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                  className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
+                >
+                  Subir otro archivo
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-sm text-base-300 space-y-1">
+              <p className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span>
+                  El OCR puede no capturar todos los gastos de la imagen. Revisa que estén todos los registros.
+                  Puedes <strong>agregar filas manualmente</strong> abajo o editar cada gasto con más detalle desde la sección <strong>Gastos</strong> después de importar.
+                </span>
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end">
               <button
-                onClick={() => { setStep('upload'); setRows([]); setError(''); }}
-                className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
+                onClick={addEmptyRow}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-400 hover:text-primary-300 border border-dashed border-primary-500/30 hover:border-primary-500/50 rounded-lg transition-all"
               >
-                Subir otro archivo
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Agregar fila
               </button>
             </div>
 
@@ -358,6 +444,7 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
                     <th className="px-3 py-2.5 text-left text-xs font-medium text-base-400 uppercase tracking-wider">Concepto</th>
                     {isOwner && <th className="px-3 py-2.5 text-left text-xs font-medium text-base-400 uppercase tracking-wider">Usuario</th>}
                     <th className="px-3 py-2.5 text-center text-xs font-medium text-base-400 uppercase tracking-wider">Tarjeta</th>
+                    {showOrigin && <th className="px-3 py-2.5 text-center text-xs font-medium text-base-400 uppercase tracking-wider">Origen</th>}
                     <th className="px-3 py-2.5 text-center text-xs font-medium text-base-400 uppercase tracking-wider" />
                   </tr>
                 </thead>
@@ -373,6 +460,7 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
                       editRef={editRef}
                       onRemove={removeRow}
                       onUserChange={handleUserChange}
+                      showOrigin={showOrigin}
                     />
                   ))}
                 </tbody>
