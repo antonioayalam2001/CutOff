@@ -26,7 +26,7 @@ export default function NewCardPage() {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6 cinematic-stagger">
           <div className="h-8 w-48 bg-base-800 rounded-lg animate-shimmer bg-gradient-to-r from-base-800 via-base-700 to-base-800 bg-[length:200%_100%]" />
           <div className="max-w-md mx-auto">
             <div className="bg-base-900 rounded-2xl border border-base-800 p-6">
@@ -44,7 +44,7 @@ export default function NewCardPage() {
   if (isError) {
     return (
       <ProtectedRoute>
-        <div className="text-center py-16 bg-base-900 rounded-2xl border border-base-800 animate-fade-in">
+        <div className="text-center py-16 bg-base-900 rounded-2xl border border-base-800">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-500/10 flex items-center justify-center">
             <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
@@ -59,12 +59,17 @@ export default function NewCardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="space-y-6 animate-fade-in">
-        <h1 className="text-2xl font-display text-base-100">{group?.name}</h1>
+      <div className="space-y-6 cinematic-stagger">
+        <h1 className="ui-page-title">{group?.name}</h1>
         <GroupTabs groupId={groupId} />
         <div className="max-w-md mx-auto">
-          <div className="bg-base-900 rounded-2xl border border-base-800 p-6">
-            <h2 className="text-lg font-semibold text-base-100 mb-4 font-display">Nueva tarjeta</h2>
+          <div className="ui-panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="ui-section-title">Nueva tarjeta</h2>
+              <button onClick={() => router.back()} className="ui-chip px-3">
+                Volver
+              </button>
+            </div>
             <CardForm
               onSubmit={async (data) => {
                 try {

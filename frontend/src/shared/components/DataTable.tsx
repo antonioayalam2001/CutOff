@@ -129,11 +129,11 @@ function DataTableInner<T extends { id: string }>({
           ) : (
             table.getRowModel().rows.map((row, i) => (
               <tr
-                key={row.id}
-                className={`hover:bg-base-800/40 transition-colors duration-150 animate-fade-in ${
+                key={row.original.id}
+                className={`hover:bg-base-800/40 transition-colors duration-150 animate-slide-up-fast ${
                   selectedIds?.has(row.original.id) ? 'bg-primary-500/5' : ''
                 }`}
-                style={{ animationDelay: `${i * 30}ms`, animationFillMode: 'both' }}
+                style={{ animationDelay: `${i * 20}ms`, animationFillMode: 'both' }}
               >
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id} className="px-4 py-3 text-sm text-base-200 whitespace-normal break-words min-w-[100px]">

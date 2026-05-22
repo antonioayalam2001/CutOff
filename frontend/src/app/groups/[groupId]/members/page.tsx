@@ -71,15 +71,15 @@ export default function MembersPage() {
 
   return (
     <ProtectedRoute>
-      <div className="space-y-6 animate-fade-in">
-        <h1 className="text-2xl font-display text-base-100">{group?.name}</h1>
+      <div className="space-y-6 cinematic-stagger">
+        <h1 className="ui-page-title">{group?.name}</h1>
         <GroupTabs groupId={groupId} />
 
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-base-100">Miembros</h2>
+          <h2 className="ui-section-title">Miembros</h2>
         </div>
 
-        <div className="bg-base-900 rounded-2xl border border-base-800 overflow-hidden">
+        <div className="ui-panel">
           <DataTable columns={columns} data={members || []} isLoading={isLoading} error={isError ? (error instanceof Error ? error.message : 'Error al cargar miembros') : null} />
         </div>
       </div>

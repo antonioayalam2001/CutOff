@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useMemo, memo, useCallback, startTransition } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { parseXml, ParsedTransaction } from '@/features/import/lib/xml-parser';
 import { parseFile } from '@/features/import/lib/parseFile';
 import { Card } from '@/types';
@@ -33,6 +34,7 @@ let rowIdCounter = 0;
 const nextId = () => `row_${++rowIdCounter}`;
 
 interface ImportRowProps {
+  index: number;
   id: string;
   date: string;
   amount: number;
@@ -50,12 +52,22 @@ interface ImportRowProps {
 }
 
 const ImportRow = memo(function ImportRow({
+  index,
   id, date, amount, concept, userId, origin,
   isOwner, memberOptions, cardName, inputClass,
   editRef, onRemove, onUserChange, showOrigin,
 }: ImportRowProps) {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
-    <tr className="hover:bg-base-800/30 transition-colors">
+    <motion.tr
+      layout
+      initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -22, scale: 1.18, filter: 'blur(12px)' }}
+      animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+      exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, scale: 0.86, filter: 'blur(8px)' }}
+      transition={{ duration: shouldReduceMotion ? 0.12 : 0.35, delay: shouldReduceMotion ? 0 : index * 0.055, ease: [0.23, 1, 0.32, 1] }}
+      className="hover:bg-base-800/30 transition-colors"
+    >
       <td className="px-3 py-2">
         <input
           type="date"
@@ -136,7 +148,7 @@ const ImportRow = memo(function ImportRow({
           </svg>
         </button>
       </td>
-    </tr>
+    </motion.tr>
   );
 });
 
@@ -449,20 +461,23 @@ export function XmlImportModal({ cards, members, currentUserId, isOwner, onSave,
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-base-800">
-                  {rows.map((row) => (
-                    <ImportRow
-                      key={row.id}
-                      {...row}
-                      isOwner={isOwner}
-                      memberOptions={memberOptions}
-                      cardName={cardName}
-                      inputClass={inputClass}
-                      editRef={editRef}
-                      onRemove={removeRow}
-                      onUserChange={handleUserChange}
-                      showOrigin={showOrigin}
-                    />
-                  ))}
+                  <AnimatePresence initial={false}>
+                    {rows.map((row, index) => (
+                      <ImportRow
+                        key={row.id}
+                        index={index}
+                        {...row}
+                        isOwner={isOwner}
+                        memberOptions={memberOptions}
+                        cardName={cardName}
+                        inputClass={inputClass}
+                        editRef={editRef}
+                        onRemove={removeRow}
+                        onUserChange={handleUserChange}
+                        showOrigin={showOrigin}
+                      />
+                    ))}
+                  </AnimatePresence>
                 </tbody>
               </table>
             </div>

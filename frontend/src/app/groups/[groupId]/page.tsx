@@ -26,7 +26,7 @@ export default function GroupDetailPage() {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6 cinematic-stagger">
           <div className="h-8 w-48 bg-base-800 rounded-lg animate-shimmer bg-gradient-to-r from-base-800 via-base-700 to-base-800 bg-[length:200%_100%]" />
           <div className="grid gap-4 sm:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -44,7 +44,7 @@ export default function GroupDetailPage() {
   if (isError) {
     return (
       <ProtectedRoute>
-        <div className="text-center py-16 bg-base-900 rounded-2xl border border-base-800 animate-fade-in">
+        <div className="text-center py-16 bg-base-900 rounded-2xl border border-base-800">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-500/10 flex items-center justify-center">
             <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
@@ -64,7 +64,7 @@ export default function GroupDetailPage() {
 
   return (
     <ProtectedRoute>
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-8 cinematic-stagger">
         <div>
           <h1 className="text-3xl font-display text-base-100">{group?.name}</h1>
           <p className="text-sm text-base-500 mt-1">

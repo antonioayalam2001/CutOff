@@ -79,16 +79,16 @@ export default function CardsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="space-y-6 animate-fade-in">
-        <h1 className="text-2xl font-display text-base-100">{group?.name}</h1>
+      <div className="space-y-6 cinematic-stagger">
+        <h1 className="ui-page-title">{group?.name}</h1>
         <GroupTabs groupId={groupId} />
 
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-base-100">Tarjetas</h2>
+          <h2 className="ui-section-title">Tarjetas</h2>
           {isOwner && <Button onClick={() => setShowCreate(true)} size="sm">Agregar tarjeta</Button>}
         </div>
 
-        <div className="bg-base-900 rounded-2xl border border-base-800 overflow-hidden">
+        <div className="ui-panel">
           <DataTable columns={columns} data={cards || []} isLoading={isLoading} error={isError ? (error instanceof Error ? error.message : 'Error al cargar tarjetas') : null} />
         </div>
 

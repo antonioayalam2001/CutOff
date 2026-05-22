@@ -1,48 +1,46 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import api from '@/lib/api';
+import { PASSWORD_POLICY_MESSAGE } from '@/lib/passwordPolicy';
+import { resetPasswordSchema } from '@/lib/validation';
 import { toast } from 'sonner';
+
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { token: token || '', password: '', confirmPassword: '' },
+  });
 
   useEffect(() => {
     if (!token) {
       setError('Token de recuperación no encontrado');
+    } else {
+      setValue('token', token);
     }
-  }, [token]);
+  }, [token, setValue]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      toast.error('Las contraseñas no coinciden');
-      return;
-    }
-    if (password.length < 6) {
-      toast.error('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-    setIsLoading(true);
+  const onSubmit = handleSubmit(async ({ token: formToken, password }) => {
     try {
-      await api.post('/auth/reset-password', { token, password });
+      await api.post('/auth/reset-password', { token: formToken, password });
       toast.success('Contraseña restablecida exitosamente');
       router.push('/login');
     } catch {
       toast.error('El enlace es inválido o ha expirado');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-base-950 px-4 relative overflow-hidden">
@@ -79,24 +77,24 @@ export default function ResetPasswordPage() {
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={onSubmit} className="space-y-5" noValidate>
+              <input type="hidden" {...register('token')} />
               <Input
                 label="Nueva contraseña"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
+                {...register('password')}
+                error={errors.password?.message}
+                minLength={12}
               />
+              <p className="-mt-2 text-xs text-base-500">{PASSWORD_POLICY_MESSAGE}</p>
               <Input
                 label="Confirmar contraseña"
                 type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
+                {...register('confirmPassword')}
+                error={errors.confirmPassword?.message}
+                minLength={12}
               />
-              <Button type="submit" isLoading={isLoading} className="w-full">
+              <Button type="submit" isLoading={isSubmitting} className="w-full">
                 Restablecer contraseña
               </Button>
             </form>

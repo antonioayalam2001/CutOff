@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 interface SelectOption {
   value: string;
@@ -16,12 +17,15 @@ interface SelectProps {
   compact?: boolean;
   className?: string;
   required?: boolean;
+  portal?: boolean;
+  error?: string;
 }
 
 export const Select = memo(function Select({
   value, onChange, options, placeholder = 'Seleccionar',
-  label, compact, className = '', required,
+  label, compact, className = '', required, portal = true, error,
 }: SelectProps) {
+  const shouldReduceMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -68,24 +72,33 @@ export const Select = memo(function Select({
   const btnStyles = compact
     ? 'px-2 py-1 text-xs rounded-lg'
     : 'w-full px-3.5 py-2.5 text-sm rounded-xl';
+  const errorId = error ? `${label?.toLowerCase().replace(/\s+/g, '-') || 'select'}-error` : undefined;
 
   const optionStyles = compact
     ? 'px-2 py-1.5 text-xs'
     : 'px-3.5 py-2.5 text-sm';
 
   return (
-    <div className={`${compact ? 'inline-block' : 'w-full'} ${className}`} ref={wrapperRef}>
+    <div className={`${compact ? 'inline-block' : 'w-full'} ${!portal ? 'relative' : ''} ${className}`} ref={wrapperRef}>
       {label && !compact && (
         <label className="block text-sm font-medium text-base-300 mb-1.5">{label}</label>
       )}
-      <button
+        <motion.button
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(!open)}
+        whileTap={!shouldReduceMotion ? { scale: 0.98 } : undefined}
+        transition={{ duration: 0.14, ease: [0.23, 1, 0.32, 1] }}
+        aria-invalid={!!error}
+        aria-describedby={errorId}
         className={`flex items-center justify-between gap-1 border bg-base-900 shadow-sm transition-all duration-200 ${
           open
-            ? 'border-primary-500/50 ring-2 ring-primary-500/20'
-            : 'border-base-700 hover:border-base-600'
+            ? error
+              ? 'border-red-500/50 ring-2 ring-red-500/20'
+              : 'border-primary-500/50 ring-2 ring-primary-500/20'
+            : error
+              ? 'border-red-500/50 hover:border-red-500/60'
+              : 'border-base-700 hover:border-base-600'
         } ${selected ? 'text-base-100' : 'text-base-500'} ${btnStyles} ${required && !value ? 'ring-1 ring-accent-500/30' : ''}`}
       >
         <span className={compact ? 'truncate max-w-[100px]' : ''}>
@@ -97,39 +110,102 @@ export const Select = memo(function Select({
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
-      </button>
-      {open && typeof document !== 'undefined' && createPortal(
-        <div
-          ref={dropdownRef}
-          style={dropdownStyle}
-          className="z-[100] bg-base-900 border border-base-700 shadow-2xl py-1 animate-scale-in overflow-y-auto max-h-60 rounded-xl"
-        >
-          {options.length === 0 ? (
-            <p className={`${optionStyles} text-base-500`}>Sin opciones</p>
-          ) : (
-            options.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => { onChange(option.value); setOpen(false); }}
-                className={`flex items-center justify-between w-full text-left transition-colors ${
-                  option.value === value
-                    ? 'text-primary-400 bg-primary-500/10'
-                    : 'text-base-200 hover:bg-base-800'
-                } ${optionStyles}`}
-              >
-                {option.label}
-                {option.value === value && (
-                  <svg className={`shrink-0 text-primary-400 ${compact ? 'w-3 h-3' : 'w-4 h-4'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-            ))
+      </motion.button>
+      {portal && typeof document !== 'undefined' ? createPortal(
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              ref={dropdownRef}
+              style={dropdownStyle}
+              initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -6 }}
+              animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -4 }}
+              transition={{ duration: open ? 0.2 : 0.14, ease: [0.23, 1, 0.32, 1] }}
+              className="motion-pop z-[100] bg-base-900 border border-base-700 shadow-2xl py-1 overflow-y-auto max-h-60 rounded-xl"
+            >
+              {options.length === 0 ? (
+                <p className={`${optionStyles} text-base-500`}>Sin opciones</p>
+              ) : (
+                options.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onClick={() => { onChange(option.value); setOpen(false); }}
+                    className={`flex items-center justify-between w-full text-left transition-colors ${
+                      option.value === value
+                        ? 'text-primary-400 bg-primary-500/10'
+                        : 'text-base-200 hover:bg-base-800'
+                    } ${optionStyles}`}
+                  >
+                    {option.label}
+                    {option.value === value && (
+                      <svg className={`shrink-0 text-primary-400 ${compact ? 'w-3 h-3' : 'w-4 h-4'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                ))
+              )}
+            </motion.div>
           )}
-        </div>,
+        </AnimatePresence>,
         document.body,
+      ) : (
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              ref={dropdownRef}
+              style={{ position: 'absolute', left: 0, right: 0, top: 'calc(100% + 4px)' }}
+              initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -6 }}
+              animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -4 }}
+              transition={{ duration: open ? 0.2 : 0.14, ease: [0.23, 1, 0.32, 1] }}
+              className="motion-pop z-[100] bg-base-900 border border-base-700 shadow-2xl py-1 overflow-y-auto max-h-60 rounded-xl"
+            >
+              {options.length === 0 ? (
+                <p className={`${optionStyles} text-base-500`}>Sin opciones</p>
+              ) : (
+                options.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onClick={() => { onChange(option.value); setOpen(false); }}
+                    className={`flex items-center justify-between w-full text-left transition-colors ${
+                      option.value === value
+                        ? 'text-primary-400 bg-primary-500/10'
+                        : 'text-base-200 hover:bg-base-800'
+                    } ${optionStyles}`}
+                  >
+                    {option.label}
+                    {option.value === value && (
+                      <svg className={`shrink-0 text-primary-400 ${compact ? 'w-3 h-3' : 'w-4 h-4'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                ))
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       )}
+      {error && <p id={errorId} className="mt-1.5 text-sm text-red-400">{error}</p>}
     </div>
   );
 });

@@ -1,11 +1,15 @@
 'use client';
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { Select } from '@/shared/ui/Select';
 import { Toggle } from '@/shared/ui/Toggle';
 import { Checkbox } from '@/shared/ui/Checkbox';
 import { Card, ExpenseSplit } from '@/types';
+import { expenseFormSchema } from '@/lib/validation';
 
 interface ExpenseFormData {
   cardId: string;
@@ -54,32 +58,62 @@ function SectionDivider({ label }: { label: string }) {
         <div className="w-full border-t border-base-800" />
       </div>
       <div className="relative flex justify-start">
-        <span className="pr-3 text-xs font-medium tracking-widest uppercase text-base-500 bg-base-950">{label}</span>
+        <span className="pr-3 text-xs font-medium tracking-widest uppercase text-base-500 bg-base-900">{label}</span>
       </div>
     </div>
   );
 }
 
+type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
+
 export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, isLoading, initialData }: Props) {
   const isEditMode = !!initialData;
   const isSimpleExpense = initialData && !initialData.isMSI && !initialData.isRecurring && !initialData.isSplit;
 
-  const [cardId, setCardId] = useState(initialData?.cardId || '');
-  const [userId, setUserId] = useState(initialData?.userId || '');
-  const [concept, setConcept] = useState(initialData?.concept || '');
-  const [amount, setAmount] = useState(initialData && !initialData.isSplit ? initialData.amount : '');
-  const [totalAmount, setTotalAmount] = useState(initialData?.isSplit ? initialData.amount : '');
-  const [transactionDate, setTransactionDate] = useState(
-    initialData?.transactionDate || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
-  );
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const {
+    register,
+    control,
+    handleSubmit: handleFormSubmit,
+    setError,
+    clearErrors,
+    reset,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ExpenseFormValues>({
+    resolver: zodResolver(expenseFormSchema),
+    defaultValues: {
+      cardId: initialData?.cardId || '',
+      userId: initialData?.userId || '',
+      concept: initialData?.concept || '',
+      amount: initialData && !initialData.isSplit ? initialData.amount : '',
+      totalAmount: initialData?.isSplit ? initialData.amount : '',
+      transactionDate: initialData?.transactionDate || today,
+      totalInstallments: String(initialData?.totalInstallments || '3'),
+      recurringMonths: String(initialData?.recurringTotalMonths || '3'),
+    },
+  });
+
   const [isMSI, setIsMSI] = useState(initialData?.isMSI || false);
-  const [totalInstallments, setTotalInstallments] = useState(String(initialData?.totalInstallments || '3'));
   const [isRecurring, setIsRecurring] = useState(initialData?.isRecurring || false);
-  const [recurringMonths, setRecurringMonths] = useState(String(initialData?.recurringTotalMonths || '3'));
   const [isSplit, setIsSplit] = useState(initialData?.isSplit || false);
   const [selectedSplitUsers, setSelectedSplitUsers] = useState<Set<string>>(new Set());
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
   const [equalSplit, setEqualSplit] = useState(true);
+  const [splitError, setSplitError] = useState('');
+
+  const currentCardId = watch('cardId');
+  const currentUserId = watch('userId');
+  const currentConcept = watch('concept');
+  const currentAmount = watch('amount');
+  const currentTotalAmount = watch('totalAmount');
+  const currentTransactionDate = watch('transactionDate');
+  const currentTotalInstallments = watch('totalInstallments');
+  const currentRecurringMonths = watch('recurringMonths');
 
   useEffect(() => {
     if (initialData?.isSplit) {
@@ -87,65 +121,122 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
     }
   }, [initialData?.isSplit]);
 
+  useEffect(() => {
+    reset({
+      cardId: initialData?.cardId || '',
+      userId: initialData?.userId || '',
+      concept: initialData?.concept || '',
+      amount: initialData && !initialData.isSplit ? initialData.amount : '',
+      totalAmount: initialData?.isSplit ? initialData.amount : '',
+      transactionDate: initialData?.transactionDate || today,
+      totalInstallments: String(initialData?.totalInstallments || '3'),
+      recurringMonths: String(initialData?.recurringTotalMonths || '3'),
+    });
+  }, [initialData, reset, today]);
+
   const memberOptions = useMemo(() => members.map((m) => ({ value: m.userId, label: m.userName })), [members]);
   const memberMap = useMemo(() => new Map(members.map((m) => [m.userId, m.userName])), [members]);
 
   const splitTarget = useMemo(() => {
     if (!isSplit) return 0;
-    if (isMSI && totalInstallments) {
-      return (parseFloat(totalAmount) || 0) / parseInt(totalInstallments, 10);
+    if (isMSI && currentTotalInstallments) {
+      return (parseFloat(currentTotalAmount || '0') || 0) / parseInt(currentTotalInstallments, 10);
     }
-    return parseFloat(totalAmount) || 0;
-  }, [isSplit, isMSI, totalAmount, totalInstallments]);
+    return parseFloat(currentTotalAmount || '0') || 0;
+  }, [isSplit, isMSI, currentTotalAmount, currentTotalInstallments]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmitForm = handleFormSubmit(async (data) => {
+    setSplitError('');
+    clearErrors();
 
-    const data: ExpenseFormData = {
-      cardId,
-      userId: isOwner && userId ? userId : undefined,
-      concept,
-      amount: isSplit ? parseFloat(totalAmount) : parseFloat(amount),
-      transactionDate,
+    const normalizedUserId = isOwner && !isSplit && !initialData?.isSplit ? data.userId || undefined : undefined;
+    if (isOwner && !isSplit && !initialData?.isSplit && !normalizedUserId) {
+      setError('userId', { type: 'manual', message: 'Selecciona un usuario' });
+      return;
+    }
+
+    if (!isSplit && !data.amount?.trim()) {
+      setError('amount', { type: 'manual', message: 'Ingresa un monto' });
+      return;
+    }
+
+    if (isSplit && !data.totalAmount?.trim()) {
+      setError('totalAmount', { type: 'manual', message: 'Ingresa un total' });
+      return;
+    }
+
+    if (isMSI && !data.totalInstallments?.trim()) {
+      setError('totalInstallments', { type: 'manual', message: 'Ingresa las parcialidades' });
+      return;
+    }
+
+    if (isRecurring && !data.recurringMonths?.trim()) {
+      setError('recurringMonths', { type: 'manual', message: 'Ingresa los meses' });
+      return;
+    }
+
+    if (isSplit && selectedSplitUsers.size < 2) {
+      setSplitError('Selecciona al menos 2 usuarios para dividir el gasto');
+      return;
+    }
+
+    if (isSplit && !splitTotalValid) {
+      setSplitError('La suma de los importes no coincide con el total');
+      return;
+    }
+
+    const payload: ExpenseFormData = {
+      cardId: data.cardId,
+      userId: normalizedUserId,
+      concept: data.concept,
+      amount: isSplit ? parseFloat(data.totalAmount || '0') : parseFloat(data.amount || '0'),
+      transactionDate: data.transactionDate,
     };
 
     if (isMSI) {
-      data.isMSI = true;
-      data.totalInstallments = parseInt(totalInstallments, 10);
+      payload.isMSI = true;
+      payload.totalInstallments = parseInt(data.totalInstallments || '0', 10);
     }
 
     if (isRecurring) {
-      data.isRecurring = true;
-      data.recurringMonths = parseInt(recurringMonths, 10);
+      payload.isRecurring = true;
+      payload.recurringMonths = parseInt(data.recurringMonths || '0', 10);
     }
 
     if (isSplit) {
-      data.isSplit = true;
-      data.splits = Array.from(selectedSplitUsers).map((uid) => ({
+      payload.isSplit = true;
+      payload.splits = Array.from(selectedSplitUsers).map((uid) => ({
         userId: uid,
         amount: equalSplit ? splitTarget / selectedSplitUsers.size : parseFloat(customAmounts[uid] || '0'),
       }));
     }
 
     if (isEditMode && onSubmitEdit && initialData) {
-      await onSubmitEdit(initialData.id, data);
+      await onSubmitEdit(initialData.id, payload);
     } else if (onSubmit) {
-      await onSubmit(data);
+      await onSubmit(payload);
     }
 
     if (!isEditMode) {
-      setConcept('');
-      setAmount('');
-      setTotalAmount('');
-      setCardId('');
+      reset({
+        cardId: '',
+        userId: '',
+        concept: '',
+        amount: '',
+        totalAmount: '',
+        transactionDate: today,
+        totalInstallments: '3',
+        recurringMonths: '3',
+      });
       setIsMSI(false);
       setIsRecurring(false);
       setIsSplit(false);
       setSelectedSplitUsers(new Set());
       setCustomAmounts({});
       setEqualSplit(true);
+      setSplitError('');
     }
-  };
+  });
 
   const toggleSplitUser = useCallback((uid: string) => {
     setSelectedSplitUsers((prev) => {
@@ -186,7 +277,7 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
   const isBlockedExpense = initialData && (initialData.isMSI || initialData.isRecurring || initialData.isSplit);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={onSubmitForm} className="space-y-5" noValidate>
       <SectionDivider label={isEditMode ? 'Editar gasto' : 'Información general'} />
 
       {isEditMode && (
@@ -195,26 +286,40 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
         </div>
       )}
 
-      <Select
-        label="Tarjeta"
-        value={cardId}
-        onChange={setCardId}
-        options={cards.map((c) => ({ value: c.id, label: `${c.name} (••••${c.lastFourDigits})` }))}
-        placeholder="Seleccionar tarjeta"
-        {...(isBlockedExpense ? { className: 'pointer-events-none opacity-50' } : {})}
+      <Controller
+        control={control}
+        name="cardId"
+        render={({ field }) => (
+          <Select
+            label="Tarjeta"
+            value={field.value}
+            onChange={field.onChange}
+            options={cards.map((c) => ({ value: c.id, label: `${c.name} (••••${c.lastFourDigits})` }))}
+            placeholder="Seleccionar tarjeta"
+            error={errors.cardId?.message}
+            {...(isBlockedExpense ? { className: 'pointer-events-none opacity-50' } : {})}
+          />
+        )}
       />
 
       {isOwner && !isSplit && !initialData?.isSplit && (
-        <Select
-          label="Asignar a"
-          value={userId}
-          onChange={setUserId}
-          options={memberOptions}
-          placeholder="Seleccionar usuario"
+        <Controller
+          control={control}
+          name="userId"
+          render={({ field }) => (
+            <Select
+              label="Asignar a"
+              value={field.value || ''}
+              onChange={field.onChange}
+              options={memberOptions}
+              placeholder="Seleccionar usuario"
+              error={errors.userId?.message}
+            />
+          )}
         />
       )}
 
-      <Input label="Concepto" value={concept} onChange={(e) => setConcept(e.target.value)} required />
+      <Input label="Concepto" {...register('concept')} error={errors.concept?.message} />
 
       {isSplit || initialData?.isSplit ? (
         <Input
@@ -222,9 +327,8 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
           type="number"
           step="0.01"
           min="0.01"
-          value={totalAmount}
-          onChange={(e) => setTotalAmount(e.target.value)}
-          required
+          {...register('totalAmount')}
+          error={errors.totalAmount?.message || (splitError && isSplit ? splitError : undefined)}
           {...(isBlockedExpense && !isSimpleExpense ? { className: 'pointer-events-none opacity-50' } : {})}
         />
       ) : (
@@ -233,9 +337,8 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
           type="number"
           step="0.01"
           min="0.01"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          required
+          {...register('amount')}
+          error={errors.amount?.message}
           {...(isBlockedExpense && !isSimpleExpense ? { className: 'pointer-events-none opacity-50' } : {})}
         />
       )}
@@ -243,9 +346,8 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
       <Input
         label="Fecha de transacción"
         type="date"
-        value={transactionDate}
-        onChange={(e) => setTransactionDate(e.target.value)}
-        required
+        {...register('transactionDate')}
+        error={errors.transactionDate?.message}
         {...(isBlockedExpense && !isSimpleExpense ? { className: 'pointer-events-none opacity-50' } : {})}
       />
 
@@ -253,7 +355,7 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
         <>
           <SectionDivider label="Opciones de pago" />
 
-          <div className="space-y-3 bg-base-900/50 rounded-xl border border-base-800/50 p-4">
+          <div className="space-y-3 bg-base-900/60 rounded-xl border border-base-800/70 p-4">
             {(!isEditMode || !initialData?.isMSI) && (
               <Toggle id="isMSI" checked={isMSI} onChange={(v) => { setIsMSI(v); if (v) setIsRecurring(false); }} label="Meses Sin Intereses (MSI)" disabled={!isSimpleExpense && isEditMode} />
             )}
@@ -265,9 +367,8 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
                   type="number"
                   min={2}
                   max={48}
-                  value={totalInstallments}
-                  onChange={(e) => setTotalInstallments(e.target.value)}
-                  required
+                  {...register('totalInstallments')}
+                  error={errors.totalInstallments?.message}
                 />
               </div>
             )}
@@ -301,14 +402,14 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
                     <button
                       type="button"
                       onClick={handleEqualSplit}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${equalSplit ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30' : 'bg-base-800 text-base-400 border border-base-700 hover:text-base-200'}`}
+                      className={`${equalSplit ? 'ui-chip-active' : 'ui-chip'} px-3 py-1.5 text-xs`}
                     >
                       Repartir equitativamente
                     </button>
                     <button
                       type="button"
                       onClick={handleCustomSplit}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${!equalSplit ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30' : 'bg-base-800 text-base-400 border border-base-700 hover:text-base-200'}`}
+                      className={`${!equalSplit ? 'ui-chip-active' : 'ui-chip'} px-3 py-1.5 text-xs`}
                     >
                       Personalizar
                     </button>
@@ -320,15 +421,15 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
                     {Array.from(selectedSplitUsers).map((uid) => (
                       <div key={uid} className="flex items-center gap-3">
                         <span className="text-sm text-base-400 w-28 truncate shrink-0">{memberMap.get(uid) || uid}</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          value={customAmounts[uid] || ''}
-                          onChange={(e) => setCustomAmounts((prev) => ({ ...prev, [uid]: e.target.value }))}
-                          className="flex-1 w-full px-3 py-1.5 text-sm bg-base-800 border border-base-700 rounded-lg text-base-100 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all placeholder-base-500"
-                          placeholder="Monto"
-                        />
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={customAmounts[uid] || ''}
+                            onChange={(e) => setCustomAmounts((prev) => ({ ...prev, [uid]: e.target.value }))}
+                            className="motion-press flex-1 w-full px-3 py-1.5 text-sm bg-base-800 border border-base-700 rounded-lg text-base-100 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 placeholder-base-500"
+                            placeholder="Monto"
+                          />
                       </div>
                     ))}
                   </div>
@@ -356,9 +457,8 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
                   type="number"
                   min={2}
                   max={60}
-                  value={recurringMonths}
-                  onChange={(e) => setRecurringMonths(e.target.value)}
-                  required
+                  {...register('recurringMonths')}
+                  error={errors.recurringMonths?.message}
                 />
               </div>
             )}
@@ -374,7 +474,7 @@ export function ExpenseForm({ cards, isOwner, members, onSubmit, onSubmitEdit, i
 
       <Button
         type="submit"
-        isLoading={isLoading}
+        isLoading={isLoading || isSubmitting}
         className="w-full"
         disabled={(isSplit && (!splitTotalValid || selectedSplitUsers.size < 2))}
       >

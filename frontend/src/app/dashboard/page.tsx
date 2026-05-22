@@ -44,10 +44,10 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-8 cinematic-stagger">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-display text-base-100">Mis Grupos</h1>
+            <h1 className="ui-page-title">Mis Grupos</h1>
             <p className="text-sm text-base-500 mt-1">Administra tus grupos de gastos compartidos</p>
           </div>
           <div className="flex gap-2">
@@ -70,7 +70,7 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : isError ? (
-          <div className="text-center py-16 bg-base-900 rounded-2xl border border-base-800 animate-fade-in">
+          <div className="text-center py-16 bg-base-900 rounded-2xl border border-base-800">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-500/10 flex items-center justify-center">
               <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
@@ -95,7 +95,7 @@ export default function DashboardPage() {
               <Link
                 key={group.id}
                 href={`/groups/${group.id}`}
-                className="group block bg-base-900 rounded-2xl border border-base-800 p-6 hover:border-primary-500/30 hover:shadow-lg hover:shadow-primary-500/5 transition-all duration-300 animate-slide-up"
+                className="group block bg-base-900 rounded-2xl border border-base-800 p-6 hover:border-primary-500/30 hover:shadow-lg hover:shadow-primary-500/5 motion-press animate-slide-up"
                 style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'both' }}
               >
                 <h3 className="font-semibold text-base-100 group-hover:text-primary-400 transition-colors">

@@ -1,7 +1,7 @@
 'use client';
 import { create } from 'zustand';
 import api from '@/lib/api';
-import { AuthResponse, User } from '@/types';
+import { AuthResponse, ChangePasswordPayload, UpdateProfilePayload, User } from '@/types';
 
 interface AuthState {
   user: User | null;
@@ -10,6 +10,9 @@ interface AuthState {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  refreshProfile: () => Promise<User | null>;
+  updateProfile: (payload: UpdateProfilePayload) => Promise<User>;
+  changePassword: (payload: ChangePasswordPayload) => Promise<void>;
   logout: () => void;
   loadFromStorage: () => void;
   saveAuth: (data: AuthResponse) => void;
@@ -46,6 +49,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     set({ user: { ...data.user, createdAt: '', updatedAt: '' }, token: data.token, isAuthenticated: true });
+  },
+
+  refreshProfile: async () => {
+    const { data } = await api.get<User>('/users/me');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(data));
+    }
+    set({ user: data, isAuthenticated: true });
+    return data;
+  },
+
+  updateProfile: async (payload: UpdateProfilePayload) => {
+    const { data } = await api.patch<User>('/users/me', payload);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(data));
+    }
+    set({ user: data, isAuthenticated: true });
+    return data;
+  },
+
+  changePassword: async (payload: ChangePasswordPayload) => {
+    await api.patch('/users/me/password', payload);
   },
 
   login: async (email: string, password: string) => {

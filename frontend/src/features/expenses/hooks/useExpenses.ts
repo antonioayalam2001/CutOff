@@ -1,5 +1,6 @@
 'use client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Expense, CreateExpensePayload, PaginatedResponse } from '@/types';
 
@@ -23,6 +24,7 @@ export function useExpenses(groupId: string, filters: ExpenseFilters = {}) {
         })
         .then((r) => r.data),
     enabled: !!groupId,
+    placeholderData: keepPreviousData,
   });
 }
 

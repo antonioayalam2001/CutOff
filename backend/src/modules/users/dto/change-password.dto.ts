@@ -1,12 +1,11 @@
-import { IsString, MinLength, Matches } from 'class-validator';
+import { IsString, Matches } from 'class-validator';
 import { PASSWORD_POLICY_MESSAGE, PASSWORD_POLICY_REGEX } from '../../../common/constants/password-policy';
 
-export class ResetPasswordDto {
+export class ChangePasswordDto {
   @IsString()
-  token: string;
+  currentPassword: string;
 
   @IsString()
-  @MinLength(12)
   @Matches(PASSWORD_POLICY_REGEX, { message: PASSWORD_POLICY_MESSAGE })
-  password: string;
+  newPassword: string;
 }

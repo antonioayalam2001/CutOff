@@ -68,6 +68,10 @@ function ExpensesContent() {
     updateURL({ limit: l !== 10 ? String(l) : null, page: '1' });
   }, [updateURL]);
 
+  const goToPage = useCallback((nextPage: number) => {
+    updateURL({ page: nextPage > 1 ? String(nextPage) : null });
+  }, [updateURL]);
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>(
     dateFrom || dateTo ? { from: dateFrom ? new Date(dateFrom) : undefined, to: dateTo ? new Date(dateTo) : undefined } : undefined,
   );
@@ -383,16 +387,16 @@ function ExpensesContent() {
 
   return (
     <ProtectedRoute>
-      <div className="space-y-6 animate-fade-in">
-        <h1 className="text-2xl font-display text-base-100">{group?.name}</h1>
+      <div className="space-y-6 cinematic-stagger">
+        <h1 className="ui-page-title">{group?.name}</h1>
         <GroupTabs groupId={groupId} />
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-base-100">Gastos</h2>
+          <h2 className="ui-section-title">Gastos</h2>
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setShowXmlImport(true)}
-              className="px-3 py-1.5 text-sm font-medium bg-base-800 text-base-300 border border-base-700 hover:text-base-100 hover:border-base-600 rounded-xl transition-all flex items-center gap-1.5"
+                className="motion-press px-3 py-1.5 text-sm font-medium bg-base-800 text-base-300 border border-base-700 hover:text-base-100 hover:border-base-600 rounded-xl flex items-center gap-1.5"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -405,7 +409,7 @@ function ExpensesContent() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="ui-toolbar">
           <div className="relative w-full sm:w-auto">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -415,18 +419,18 @@ function ExpensesContent() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Buscar por concepto..."
-              className="w-full sm:w-56 pl-9 pr-3 py-1.5 text-sm bg-base-800 border border-base-700 rounded-lg text-base-100 placeholder-base-500 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all"
+                className="w-full sm:w-56 pl-9 pr-3 py-1.5 text-sm bg-base-800 border border-base-700 rounded-lg text-base-100 placeholder-base-500 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 motion-press"
             />
           </div>
 
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => updateURL({ card: null, page: '1' })}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                selectedCardId === null
-                  ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                  : 'bg-base-800 text-base-400 border border-base-700 hover:text-base-200 hover:border-base-600'
-              }`}
+                className={`${
+                  selectedCardId === null
+                    ? 'ui-chip-active'
+                    : 'ui-chip'
+                }`}
             >
               Todas
             </button>
@@ -434,11 +438,11 @@ function ExpensesContent() {
               <button
                 key={card.id}
                 onClick={() => updateURL({ card: card.id !== selectedCardId ? card.id : null, page: '1' })}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  selectedCardId === card.id
-                    ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                    : 'bg-base-800 text-base-400 border border-base-700 hover:text-base-200 hover:border-base-600'
-                }`}
+                  className={`${
+                    selectedCardId === card.id
+                      ? 'ui-chip-active'
+                      : 'ui-chip'
+                  }`}
               >
                 {card.name}
               </button>
@@ -450,10 +454,10 @@ function ExpensesContent() {
           <div className="relative">
             <button
               onClick={() => setShowDatePicker(!showDatePicker)}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                dateRange
-                  ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                  : 'bg-base-800 text-base-400 border border-base-700 hover:text-base-200 hover:border-base-600'
+               className={`motion-press flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium ${
+                 dateRange
+                   ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                   : 'bg-base-800 text-base-400 border border-base-700 hover:text-base-200 hover:border-base-600'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -504,7 +508,7 @@ function ExpensesContent() {
           <div className="relative">
             <button
               onClick={() => setShowUserFilter(!showUserFilter)}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium bg-base-800 text-base-400 border border-base-700 hover:text-base-200 hover:border-base-600 transition-all"
+               className="motion-press flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium bg-base-800 text-base-400 border border-base-700 hover:text-base-200 hover:border-base-600"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -586,7 +590,7 @@ function ExpensesContent() {
           </div>
         )}
 
-        <div className="bg-base-900 rounded-2xl border border-base-800 overflow-hidden">
+        <div className="ui-panel">
           <DataTable
             columns={columns}
             data={expenses}
@@ -602,7 +606,7 @@ function ExpensesContent() {
             <span className="text-sm text-base-500">Mostrar</span>
             <Select
               value={String(limit)}
-              onChange={(v) => { setLimit(Number(v)); setPage(1); }}
+              onChange={(v) => { setLimit(Number(v)); }}
               options={[5, 10, 20, 50].map((n) => ({ value: String(n), label: String(n) }))}
               compact
             />
@@ -611,35 +615,39 @@ function ExpensesContent() {
 
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              type="button"
+              onClick={() => goToPage(Math.max(1, page - 1))}
               disabled={page <= 1}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium bg-base-800 text-base-400 border border-base-700 hover:text-base-200 hover:border-base-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="ui-chip disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Anterior
             </button>
             {Array.from({ length: totalPages }, (_, i) => i + 1)
               .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
               .map((p, idx, arr) => (
-                <span key={p} className="flex items-center">
+                <div key={p} className="flex items-center">
                   {idx > 0 && arr[idx - 1] !== p - 1 && (
                     <span className="px-1 text-base-600">...</span>
                   )}
-                <button
-                  onClick={() => setPage(p)}
-                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    p === page
-                      ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                      : 'bg-base-800 text-base-400 border border-base-700 hover:text-base-200 hover:border-base-600'
-                  }`}
-                >
-                  {p}
-                </button>
-                </span>
+                  <button
+                    type="button"
+                    onClick={() => goToPage(p)}
+                    className={`px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium ${
+                      p === page
+                        ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                        : 'bg-base-800 text-base-400 border border-base-700 hover:text-base-200 hover:border-base-600 motion-press'
+                    }`}
+                    aria-current={p === page ? 'page' : undefined}
+                  >
+                    {p}
+                  </button>
+                </div>
               ))}
             <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              type="button"
+              onClick={() => goToPage(Math.min(totalPages, page + 1))}
               disabled={page >= totalPages}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium bg-base-800 text-base-400 border border-base-700 hover:text-base-200 hover:border-base-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="ui-chip disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Siguiente
             </button>

@@ -2,6 +2,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 
@@ -10,6 +11,7 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
+  const shouldReduceMotion = useReducedMotion();
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -60,9 +62,15 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Link
+                href="/profile"
+                className="hidden sm:inline-flex motion-press items-center px-3 py-1.5 rounded-lg text-sm font-medium text-base-400 hover:text-base-200 hover:bg-base-800"
+              >
+                Perfil
+              </Link>
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg text-base-400 hover:text-base-200 hover:bg-base-800 transition-all duration-200 active:scale-90"
+                className="motion-press p-2 rounded-lg text-base-400 hover:text-base-200 hover:bg-base-800"
                 aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
                 aria-pressed={theme !== 'dark'}
               >
@@ -86,7 +94,7 @@ export function Layout({ children }: LayoutProps) {
                   logout();
                   router.push('/login');
                 }}
-                className="text-sm text-base-500 hover:text-base-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-base-800"
+                className="motion-press text-sm text-base-500 hover:text-base-300 px-3 py-1.5 rounded-lg hover:bg-base-800"
                 aria-label="Cerrar sesión"
               >
                 Cerrar sesión
@@ -95,9 +103,16 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </nav>
-      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+      <motion.main
+        id="main-content"
+        key={pathname}
+        initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+        animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
         {children}
-      </main>
+      </motion.main>
     </div>
   );
 }

@@ -32,6 +32,39 @@ const DialogContent = forwardRef<
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <DialogPrimitive.Content
         ref={ref}
+        onPointerDownOutside={(event) => {
+          if (document.body.getAttribute('data-select-open') === 'true') {
+            event.preventDefault();
+            return;
+          }
+          const originalTarget = (event as unknown as { detail?: { originalEvent?: { target?: EventTarget | null } } }).detail?.originalEvent?.target;
+          const target = (originalTarget || event.target) as HTMLElement | null;
+          if (target?.closest('[data-select-portal="true"]')) {
+            event.preventDefault();
+          }
+        }}
+        onFocusOutside={(event) => {
+          if (document.body.getAttribute('data-select-open') === 'true') {
+            event.preventDefault();
+            return;
+          }
+          const originalTarget = (event as unknown as { detail?: { originalEvent?: { target?: EventTarget | null } } }).detail?.originalEvent?.target;
+          const target = (originalTarget || event.target) as HTMLElement | null;
+          if (target?.closest('[data-select-portal="true"]')) {
+            event.preventDefault();
+          }
+        }}
+        onInteractOutside={(event) => {
+          if (document.body.getAttribute('data-select-open') === 'true') {
+            event.preventDefault();
+            return;
+          }
+          const originalTarget = (event as unknown as { detail?: { originalEvent?: { target?: EventTarget | null } } }).detail?.originalEvent?.target;
+          const target = (originalTarget || event.target) as HTMLElement | null;
+          if (target?.closest('[data-select-portal="true"]')) {
+            event.preventDefault();
+          }
+        }}
         className={cn(
           'w-full max-w-md bg-base-900 border border-base-700 rounded-2xl shadow-2xl p-6 animate-scale-in',
           className,
@@ -39,7 +72,7 @@ const DialogContent = forwardRef<
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 text-base-500 hover:text-base-300 transition-colors p-1 rounded-lg hover:bg-base-800">
+        <DialogPrimitive.Close className="motion-press absolute right-4 top-4 text-base-500 hover:text-base-300 p-1 rounded-lg hover:bg-base-800">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>

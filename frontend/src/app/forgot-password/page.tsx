@@ -1,28 +1,32 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { forgotPasswordSchema } from '@/lib/validation';
+
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: '' },
+  });
   const [sent, setSent] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const onSubmit = handleSubmit(async ({ email }) => {
     try {
       await api.post('/auth/forgot-password', { email });
       setSent(true);
     } catch {
       toast.error('Error al enviar la solicitud');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-base-950 px-4 relative overflow-hidden">
@@ -63,9 +67,9 @@ export default function ForgotPasswordPage() {
             </div>
           ) : (
             <>
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                <Button type="submit" isLoading={isLoading} className="w-full">Enviar enlace</Button>
+              <form onSubmit={onSubmit} className="space-y-5" noValidate>
+                <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
+                <Button type="submit" isLoading={isSubmitting} className="w-full">Enviar enlace</Button>
               </form>
               <p className="text-sm text-base-500 text-center mt-6">
                 <Link href="/login" className="text-primary-400 hover:text-primary-300 transition-colors font-medium">

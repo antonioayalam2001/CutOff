@@ -1,33 +1,35 @@
 'use client';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { PASSWORD_POLICY_MESSAGE } from '@/lib/passwordPolicy';
+import { registerSchema } from '@/lib/validation';
 import { toast } from 'sonner';
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
   const register = useAuthStore((s) => s.register);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { register: formRegister, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: '', email: '', password: '' },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const onSubmit = handleSubmit(async ({ name, email, password }) => {
     try {
       await register(name, email, password);
       toast.success('Cuenta creada exitosamente');
       router.push('/dashboard');
     } catch {
       toast.error('Error al crear la cuenta');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-base-950 px-4 relative overflow-hidden">
@@ -45,11 +47,12 @@ export default function RegisterPage() {
           <p className="text-sm text-base-400 tracking-wide">Regístrate para gestionar tus gastos</p>
         </div>
         <div className="glass-strong rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Input label="Nombre" value={name} onChange={(e) => setName(e.target.value)} required />
-            <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <Input label="Contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
-            <Button type="submit" isLoading={isLoading} className="w-full">Crear cuenta</Button>
+          <form onSubmit={onSubmit} className="space-y-5" noValidate>
+            <Input label="Nombre" {...formRegister('name')} error={errors.name?.message} />
+            <Input label="Email" type="email" {...formRegister('email')} error={errors.email?.message} />
+            <Input label="Contraseña" type="password" {...formRegister('password')} error={errors.password?.message} minLength={12} />
+            <p className="-mt-2 text-xs text-base-500">{PASSWORD_POLICY_MESSAGE}</p>
+            <Button type="submit" isLoading={isSubmitting} className="w-full">Crear cuenta</Button>
           </form>
           <p className="text-sm text-base-500 text-center mt-6">
             ¿Ya tienes cuenta?{' '}

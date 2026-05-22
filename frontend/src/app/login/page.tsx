@@ -1,32 +1,34 @@
 'use client';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { loginSchema } from '@/lib/validation';
 import { toast } from 'sonner';
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const onSubmit = handleSubmit(async ({ email, password }) => {
     try {
       await login(email, password);
       toast.success('Inicio de sesión exitoso');
       router.push('/dashboard');
     } catch {
       toast.error('Credenciales inválidas');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-base-950 px-4 relative overflow-hidden">
@@ -44,15 +46,15 @@ export default function LoginPage() {
           <p className="text-sm text-base-400 tracking-wide">Inicia sesión para continuar</p>
         </div>
         <div className="glass-strong rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <Input label="Contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <form onSubmit={onSubmit} className="space-y-5" noValidate>
+            <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
+            <Input label="Contraseña" type="password" {...register('password')} error={errors.password?.message} />
             <div className="text-right -mt-2">
               <Link href="/forgot-password" className="text-xs text-base-500 hover:text-primary-400 transition-colors">
                 ¿Olvidaste tu contraseña?
               </Link>
             </div>
-            <Button type="submit" isLoading={isLoading} className="w-full">Iniciar sesión</Button>
+            <Button type="submit" isLoading={isSubmitting} className="w-full">Iniciar sesión</Button>
           </form>
           <p className="text-sm text-base-500 text-center mt-6">
             ¿No tienes cuenta?{' '}
